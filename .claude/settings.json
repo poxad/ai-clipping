@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install \"openai>=1.50,<2.0\" \"httpx<0.28.0\")",
+      "Bash(pkill -f \"uvicorn backend.main\")"
+    ]
+  }
+}
