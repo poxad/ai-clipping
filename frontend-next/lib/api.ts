@@ -54,7 +54,6 @@ export function styleToPayload(style: {
     has_bg: style.hasBg ?? false,
     bg_color: style.bgColor ? toAssColor(style.bgColor) : "&H00000000",
     bg_opacity: style.bgOpacity ?? 60,
-    font_size: style.fontSize,
     margin_v: style.marginV,
     content_type: style.contentType ?? "retail",
     whisper_prompt: style.whisperVocab

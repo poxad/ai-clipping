@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Trash2, PlayCircle, RefreshCw, ChevronLeft, ChevronRight, Calendar, Pencil, Check, X } from "lucide-react";
 import {
@@ -685,7 +685,7 @@ function PostingLogs() {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function SchedulerPage() {
+function SchedulerPageInner() {
   const searchParams = useSearchParams();
   const connected = searchParams.get("connected");
   const oauthError = searchParams.get("error");
@@ -724,5 +724,13 @@ export default function SchedulerPage() {
         <ScheduleCalendar />
       </div>
     </div>
+  );
+}
+
+export default function SchedulerPage() {
+  return (
+    <Suspense>
+      <SchedulerPageInner />
+    </Suspense>
   );
 }
