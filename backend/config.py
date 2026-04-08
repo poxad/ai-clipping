@@ -55,18 +55,36 @@ SCENE_BREAK_THRESHOLD: float = 3.0
 
 # Target clip duration range
 MIN_CLIP_DURATION: float = 15.0
-MAX_CLIP_DURATION: float = 30.0
+MAX_CLIP_DURATION: float = 45.0
 
 # Clips with less than this much speech are discarded
 MIN_VIABLE_SPEECH: float = 5.0
 
 # Silence padding kept around each speech segment for jump cuts
-JUMP_CUT_PADDING: float = 0.1
+JUMP_CUT_PADDING: float = 0.2
+
+# Silence gap between words that triggers a jump cut within a clip.
+# Any pause longer than this between consecutive words will be cut out.
+WORD_GAP_THRESHOLD: float = 0.6
 
 # Whisper language code (Indonesian)
 WHISPER_LANGUAGE: str = "id"
 
-# Whisper audio extraction settings
+# Custom vocabulary hint passed to Whisper as a prompt.
+# List brand names, product terms, or any words Whisper keeps mishearing.
+# Example: "Kacamata Moo, lensa kontak, frame, minus, silinder, cek mata."
+WHISPER_PROMPT: str = os.getenv("WHISPER_PROMPT", "")
+
+# --- TikTok integration ---
+
+TIKTOK_CLIENT_KEY: str = os.getenv("TIKTOK_CLIENT_KEY", "")
+TIKTOK_CLIENT_SECRET: str = os.getenv("TIKTOK_CLIENT_SECRET", "")
+TIKTOK_REDIRECT_URI: str = os.getenv("TIKTOK_REDIRECT_URI", "http://localhost:8000/api/tiktok/callback")
+
+# SQLite database for scheduler
+DB_PATH: str = os.getenv("DB_PATH", "scheduler.db")
+
+# --- Whisper audio extraction settings
 AUDIO_SAMPLE_RATE: int = 16000
 AUDIO_BITRATE: str = "32k"
 

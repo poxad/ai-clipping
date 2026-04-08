@@ -4,28 +4,39 @@ Endpoints: upload, status, video streaming, ZIP download
 """
 
 import io
+import json
 import os
 import shutil
+import subprocess
 import uuid
 import zipfile
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Optional
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
-from .clipper import build_clips, create_clip_video
-from .transcriber import extract_audio, transcribe
+from .clipper import Clip, build_clips, create_clip_video, _group_into_utterances, _words_to_segments
+from .reframer import get_portrait_crop_filter
+from .transcriber import WordSegment, extract_audio, transcribe
+from .scheduler import router as scheduler_router, scheduler_loop
 
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="AI Clipping Platform")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(scheduler_loop())
+    yield
+    task.cancel()
+
+app = FastAPI(title="AI Clipping Platform", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,6 +47,8 @@ app.add_middleware(
 
 os.makedirs(config.UPLOAD_DIR, exist_ok=True)
 os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+
+app.include_router(scheduler_router)
 
 # In-memory job store (prototype — replace with SQLite/Redis for production)
 jobs: Dict[str, dict] = {}
@@ -48,6 +61,11 @@ ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 # ---------------------------------------------------------------------------
 
 def _update_job(job_id: str, **kwargs):
+    if "message" in kwargs and kwargs["message"]:
+        if "logs" not in jobs[job_id]:
+            jobs[job_id]["logs"] = []
+        if not jobs[job_id]["logs"] or jobs[job_id]["logs"][-1] != kwargs["message"]:
+            jobs[job_id]["logs"].append(kwargs["message"])
     jobs[job_id].update(kwargs)
 
 
@@ -59,82 +77,427 @@ def _job_dir(job_id: str) -> str:
 # Background processing pipeline
 # ---------------------------------------------------------------------------
 
-async def _process_video(job_id: str, video_path: str):
-    jdir = _job_dir(job_id)
-    os.makedirs(jdir, exist_ok=True)
-
+async def _process_single_video(
+    job_id: str,
+    video_path: str,
+    jdir: str,
+    clip_index_offset: int = 1,
+    progress_base: int = 5,
+    progress_end: int = 95,
+    style_dict: Optional[dict] = None,
+) -> list:
+    """Transcribe and render one video. Returns list of clip dicts. Raises on failure."""
+    audio_path = os.path.join(jdir, "audio.mp3")
+    span = progress_end - progress_base
     try:
         # 1. Extract audio
-        _update_job(job_id, status="extracting", progress=5,
-                    message="Extracting audio from video...")
-        audio_path = os.path.join(jdir, "audio.mp3")
+        _update_job(job_id, status="extracting", progress=progress_base,
+                    message=f"Extracting audio from {Path(video_path).name}...")
         await asyncio.to_thread(extract_audio, video_path, audio_path)
 
         # 2. Transcribe
-        _update_job(job_id, status="transcribing", progress=15,
+        _update_job(job_id, status="transcribing",
+                    progress=progress_base + int(span * 0.10),
                     message="Transcribing audio with Whisper... (this may take a few minutes for long videos)")
-        words = await asyncio.to_thread(transcribe, audio_path)
+        lang = style_dict.get("language", "id") if style_dict else "id"
+        whisper_prompt = style_dict.get("whisper_prompt", "") if style_dict else ""
+        words = await asyncio.to_thread(transcribe, audio_path, lang, whisper_prompt or None)
 
         if not words:
-            _update_job(job_id, status="error", progress=0,
-                        message="No speech detected in the video. Please check the audio.")
-            return
+            raise ValueError(
+                f"No speech detected in '{Path(video_path).name}'. Please check the audio.")
 
-        _update_job(job_id, progress=40,
+        # Cache transcription so re-clipping skips Whisper next time
+        import dataclasses
+        trans_path = os.path.join(jdir, "transcription.json")
+        with open(trans_path, "w") as tf:
+            json.dump([dataclasses.asdict(w) for w in words], tf)
+
+        _update_job(job_id, progress=progress_base + int(span * 0.40),
                     message=f"Transcribed {len(words)} words. Analyzing scenes...")
+        print(f"[PIPELINE] Transcribed {len(words)} words from {Path(video_path).name}")
 
-        # 3. Build clips from transcript
-        clips = await asyncio.to_thread(build_clips, words)
+        # 3. Group words into utterances, then compose story clips via LLM
+        utterances = await asyncio.to_thread(_group_into_utterances, words)
 
-        if not clips:
-            _update_job(job_id, status="error", progress=0,
-                        message="No suitable clips found. The video may be too short or mostly silence.")
-            return
+        if not utterances:
+            raise ValueError(
+                f"No speech utterances found in '{Path(video_path).name}'. "
+                "The video may be too short or mostly silence.")
 
-        _update_job(job_id, progress=50,
-                    message=f"Found {len(clips)} clips. Rendering videos...")
+        total_utt_speech = sum(u.duration for u in utterances)
+        print(f"[PIPELINE] {len(utterances)} utterances | total speech: {total_utt_speech:.1f}s")
 
-        # 4. Render each clip
+        _update_job(job_id, progress=progress_base + int(span * 0.44),
+                    message=f"AI composing story clips from {len(utterances)} utterances...")
+        from .llm import compose_story_clips
+        utt_data = [
+            {"id": i, "text": u.text, "duration": round(u.duration, 2), "start": round(u.start, 1)}
+            for i, u in enumerate(utterances)
+            if u.duration > 0.3
+        ]
+        print(f"[PIPELINE] Sending {len(utt_data)} utterances to LLM (filtered >0.3s)")
+        content_type = style_dict.get("content_type", "retail") if style_dict else "retail"
+        composed_stories = await asyncio.to_thread(compose_story_clips, utt_data, content_type)
+        print(f"[PIPELINE] LLM returned {len(composed_stories)} story candidates")
+        for i, s in enumerate(composed_stories):
+            ids = s.get("utterance_ids") or []
+            speech = sum(utterances[j].duration for j in ids if j < len(utterances))
+            print(f"  [{i+1}] {s.get('clip_type','?'):12s} | score={s.get('score','?')} | "
+                  f"{len(ids)} utts | speech={speech:.1f}s")
+
+        # Fallback to mechanical clipping if LLM composition fails
+        if not composed_stories:
+            _update_job(job_id, message="Story composition failed — falling back to scene detection...")
+            raw_clips = await asyncio.to_thread(build_clips, words)
+            composed_stories = [
+                {"utterance_ids": None, "_clip": c, "score": None, "summary": ""}
+                for c in raw_clips
+            ]
+
+        # Build Clip objects from each composed story
+        _RENDER_CAP = config.MAX_CLIP_DURATION - 5.0  # 40s headroom for padding
+        clips_with_meta = []
+        print(f"[BUILD] Assembling {len(composed_stories)} stories into clip objects...")
+        for story in composed_stories:
+            if story.get("_clip"):
+                clips_with_meta.append((story["_clip"], story))
+                continue
+            sel_ids = story.get("utterance_ids", [])
+            sel_utts = [utterances[i] for i in sel_ids if i < len(utterances)]
+            if len(sel_utts) < 2:
+                print(f"  [SKIP] story {story.get('clip_type','?')} — only {len(sel_utts)} utterances resolved")
+                continue
+            # Hard cap: trim from the end until total speech ≤ _RENDER_CAP
+            trimmed, total_speech = [], 0.0
+            for u in sel_utts:
+                if total_speech + u.duration > _RENDER_CAP:
+                    break
+                trimmed.append(u)
+                total_speech += u.duration
+            if len(trimmed) >= 1:
+                sel_utts = trimmed
+            else:
+                sel_utts = sel_utts[:2]
+
+            # Recalculate after trim
+            total_speech = sum(u.duration for u in sel_utts)
+            print(f"  [STORY] {story.get('clip_type','?'):12s} | score={story.get('score','?')} | "
+                  f"{len(sel_utts)} utts | speech={total_speech:.1f}s")
+
+            # AUTO-HARNESS: if speech < MIN_CLIP, expand with adjacent utterances
+            if total_speech < config.MIN_CLIP_DURATION and sel_ids:
+                valid_ids = [i for i in sel_ids if i < len(utterances)]
+                if valid_ids:
+                    min_idx, max_idx = min(valid_ids), max(valid_ids)
+                    print(f"  [HARNESS] speech={total_speech:.1f}s < MIN={config.MIN_CLIP_DURATION}s — expanding...")
+                    fwd = max_idx + 1
+                    while total_speech < config.MIN_CLIP_DURATION and fwd < len(utterances):
+                        u = utterances[fwd]
+                        if u.duration > 0.3:
+                            sel_utts.append(u)
+                            total_speech += u.duration
+                            print(f"  [HARNESS] +fwd[{fwd}] {u.duration:.1f}s → total={total_speech:.1f}s")
+                        fwd += 1
+                    if total_speech < config.MIN_CLIP_DURATION:
+                        bwd = min_idx - 1
+                        while total_speech < config.MIN_CLIP_DURATION and bwd >= 0:
+                            u = utterances[bwd]
+                            if u.duration > 0.3:
+                                sel_utts.insert(0, u)
+                                total_speech += u.duration
+                                print(f"  [HARNESS] +bwd[{bwd}] {u.duration:.1f}s → total={total_speech:.1f}s")
+                            bwd -= 1
+                    # Deduplicate and sort chronologically
+                    seen_ids = set()
+                    deduped = []
+                    for u in sel_utts:
+                        uid = id(u)
+                        if uid not in seen_ids:
+                            seen_ids.add(uid)
+                            deduped.append(u)
+                    sel_utts = sorted(deduped, key=lambda u: u.start)
+                    total_speech = sum(u.duration for u in sel_utts)
+                    print(f"  [HARNESS] Final: {len(sel_utts)} utts | speech={total_speech:.1f}s")
+
+            all_words = [w for u in sel_utts for w in u.words]
+            segments = _words_to_segments(all_words, config.WORD_GAP_THRESHOLD) if all_words else [(u.start, u.end) for u in sel_utts]
+            clip = Clip(
+                segments=segments,
+                start=sel_utts[0].start,
+                end=sel_utts[-1].end,
+                transcript=" ".join(u.text for u in sel_utts),
+                words=all_words,
+                index=len(clips_with_meta) + 1,
+            )
+            print(f"  [CLIP] #{len(clips_with_meta)+1} built | wall={clip.wall_duration:.1f}s | speech={clip.speech_duration:.1f}s")
+            clips_with_meta.append((clip, story))
+
+        print(f"[BUILD] {len(clips_with_meta)} clips ready for rendering")
+
+        if not clips_with_meta:
+            raise ValueError(
+                f"AI could not compose any complete customer interaction clips from '{Path(video_path).name}'.")
+
+        _update_job(job_id, progress=progress_base + int(span * 0.47),
+                    message=f"Composed {len(clips_with_meta)} story clip(s). Detecting orientation...")
+
+        # 3b. Detect orientation
+        crop_filter = await asyncio.to_thread(get_portrait_crop_filter, video_path)
+        if crop_filter:
+            _update_job(job_id,
+                        message="Landscape video detected — auto-reframing to 9:16 with face centering...")
+
+        _update_job(job_id, progress=progress_base + int(span * 0.50),
+                    message=f"Rendering {len(clips_with_meta)} clip(s)...")
+
+        # 4. Render each composed story clip
         generated = []
-        for i, clip in enumerate(clips):
-            clip_name = f"clip_{clip.index:03d}.mp4"
+        source_name = Path(video_path).name
+        for render_idx, (clip, story) in enumerate(clips_with_meta):
+            global_index = clip_index_offset + render_idx
+            clip_name = f"clip_{global_index:03d}.mp4"
             clip_path = os.path.join(jdir, clip_name)
 
-            progress = 50 + int((i / len(clips)) * 45)
-            _update_job(job_id, progress=progress,
-                        message=f"Rendering clip {i + 1} of {len(clips)}...")
+            render_frac = 0.50 + 0.45 * (render_idx / len(clips_with_meta))
+            _update_job(job_id, progress=progress_base + int(span * render_frac),
+                        message=f"Rendering clip {render_idx + 1} of {len(clips_with_meta)}...")
 
             success = await asyncio.to_thread(
-                create_clip_video, video_path, clip, clip_path
+                create_clip_video, video_path, clip, clip_path, crop_filter, style_dict
             )
 
             if success:
                 generated.append({
                     "name": clip_name,
-                    "index": clip.index,
+                    "index": global_index,
                     "transcript": clip.transcript,
                     "start": round(clip.start, 2),
                     "end": round(clip.end, 2),
-                    "duration": round(clip.wall_duration, 1),
+                    "duration": round(clip.speech_duration, 1),
                     "url": f"/api/video/{job_id}/{clip_name}",
+                    "source": source_name,
+                    "score": story.get("score"),
+                    "score_summary": story.get("summary", ""),
+                    "caption": story.get("caption", ""),
+                    "clip_type": story.get("clip_type", ""),
+                    "score_metrics": {},
                 })
 
-        _update_job(
-            job_id,
-            status="done",
-            progress=100,
-            message=f"Done! Generated {len(generated)} clips.",
-            clips=generated,
-        )
-
-    except Exception as exc:
-        _update_job(job_id, status="error", progress=0, message=str(exc))
+        return generated
 
     finally:
         # Clean up extracted audio (save disk space)
-        audio_path = os.path.join(jdir, "audio.mp3")
         if os.path.exists(audio_path):
             os.remove(audio_path)
+
+
+async def _process_video(
+    job_id: str,
+    video_path: str,
+    style_dict: Optional[dict] = None,
+    original_filename: str = "",
+):
+    jdir = _job_dir(job_id)
+    os.makedirs(jdir, exist_ok=True)
+    # Save meta so re-clip can find the video
+    with open(os.path.join(jdir, "meta.json"), "w") as mf:
+        json.dump({"video_path": video_path, "filename": original_filename}, mf)
+    try:
+        clips = await _process_single_video(job_id, video_path, jdir, style_dict=style_dict)
+        _update_job(job_id, status="done", progress=100,
+                    message=f"Done! Generated {len(clips)} clips.", clips=clips)
+    except Exception as exc:
+        _update_job(job_id, status="error", progress=0, message=str(exc))
+
+
+def _get_video_duration_sync(video_path: str) -> float:
+    """Return video duration in seconds via ffprobe."""
+    result = subprocess.run(
+        [config.FFPROBE_BIN, "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+        capture_output=True, text=True,
+    )
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
+def _find_source(t: float, sources: list) -> tuple:
+    """Return (path, offset, duration, crop_filter) for the source containing timestamp t."""
+    for path, offset, duration, crop_filter in sources:
+        if offset <= t < offset + duration + 1.0:  # +1s tolerance at boundaries
+            return path, offset, duration, crop_filter
+    return sources[-1]
+
+
+def _localize_clip(clip: "Clip", src_offset: float, src_duration: float) -> "Clip":
+    """Shift clip timestamps from the merged timeline back to source-video local time."""
+    new_segs = []
+    for s, e in clip.segments:
+        ls = max(s - src_offset, 0.0)
+        le = min(e - src_offset, src_duration)
+        if le > ls:
+            new_segs.append((ls, le))
+
+    new_words = [
+        WordSegment(w.word,
+                    max(w.start - src_offset, 0.0),
+                    min(w.end - src_offset, src_duration))
+        for w in clip.words
+        if 0.0 <= w.start - src_offset < src_duration
+    ]
+
+    return Clip(
+        segments=new_segs,
+        start=max(clip.start - src_offset, 0.0),
+        end=min(clip.end - src_offset, src_duration),
+        transcript=clip.transcript,
+        words=new_words,
+        index=clip.index,
+    )
+
+
+async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Optional[dict] = None):
+    """
+    Batch processing without video concatenation:
+      1. Transcribe each video with cumulative timestamp offsets
+      2. Merge all words → run clipping algorithm once
+      3. Render each clip from its original source video
+    """
+    jdir = _job_dir(job_id)
+    os.makedirs(jdir, exist_ok=True)
+
+    if len(video_paths) == 1:
+        await _process_video(job_id, video_paths[0], style_dict=style_dict)
+        return
+
+    total = len(video_paths)
+    sources: list = []   # (path, offset, duration, crop_filter)
+    all_words: list = []
+    cumulative = 0.0
+
+    try:
+        lang = style_dict.get("language", "id") if style_dict else "id"
+        whisper_prompt = style_dict.get("whisper_prompt", "") if style_dict else ""
+
+        # ── Step 1: transcribe each video ────────────────────────
+        for i, vpath in enumerate(video_paths):
+            prog = 5 + int(35 * i / total)
+            _update_job(job_id, status="transcribing", progress=prog,
+                        message=f"Transcribing video {i + 1} of {total}: {Path(vpath).name}")
+
+            audio_path = os.path.join(jdir, f"audio_{i}.mp3")
+            try:
+                await asyncio.to_thread(extract_audio, vpath, audio_path)
+                words = await asyncio.to_thread(transcribe, audio_path, lang, whisper_prompt or None)
+                duration = await asyncio.to_thread(_get_video_duration_sync, vpath)
+                crop_filter = await asyncio.to_thread(get_portrait_crop_filter, vpath)
+            finally:
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+
+            for w in words:
+                w.start += cumulative
+                w.end += cumulative
+
+            all_words.extend(words)
+            sources.append((vpath, cumulative, duration, crop_filter))
+            cumulative += duration
+
+        if not all_words:
+            _update_job(job_id, status="error", progress=0,
+                        message="No speech detected in any of the uploaded videos.")
+            return
+
+        # ── Step 2: build utterances, send to LLM ────────────
+        from .llm import generate_storytelling_script
+        from .clipper import _group_into_utterances, Clip, create_multisource_clip_video
+        
+        _update_job(job_id, status="clipping", progress=42,
+                    message=f"Generating AI storytelling script from {len(all_words)} words...")
+                    
+        utterances = await asyncio.to_thread(_group_into_utterances, all_words)
+        
+        utt_data = []
+        for idx, u in enumerate(utterances):
+            if u.duration > 0.3:
+                utt_data.append({
+                    "id": idx,
+                    "text": u.text,
+                    "duration": round(u.duration, 2)
+                })
+                
+        selected_ids = await asyncio.to_thread(generate_storytelling_script, utt_data)
+        
+        if not selected_ids:
+            _update_job(job_id, status="error", progress=0,
+                        message="AI failed to generate a storytelling script from these videos.")
+            return
+            
+        _update_job(job_id, status="clipping", progress=48,
+                    message=f"AI selected {len(selected_ids)} segments. Building final clip...")
+                    
+        selected_utterances = [utterances[i] for i in selected_ids if i < len(utterances)]
+        
+        if not selected_utterances:
+            _update_job(job_id, status="error", progress=0, message="No valid segments selected.")
+            return
+            
+        segments = [(u.start, u.end) for u in selected_utterances]
+        transcript = " ".join(u.text for u in selected_utterances)
+        words_list = [w for u in selected_utterances for w in u.words]
+        
+        story_clip = Clip(
+            segments=segments,
+            start=selected_utterances[0].start,
+            end=selected_utterances[-1].end,
+            transcript=transcript,
+            words=words_list,
+            index=1
+        )
+        clips = [story_clip]
+
+        # ── Step 3: render the storytelling clip across sources ─────
+        _update_job(job_id, status="rendering", progress=50,
+                    message=f"Compositing storytelling clip across {total} source videos...")
+        generated = []
+
+        for i, clip in enumerate(clips):
+            clip_name = f"clip_{i + 1:03d}.mp4"
+            clip_path = os.path.join(jdir, clip_name)
+
+            render_frac = i / len(clips)
+            _update_job(job_id, progress=50 + int(45 * render_frac),
+                        message=f"Rendering clip...")
+
+            success = await asyncio.to_thread(
+                create_multisource_clip_video, sources, clip, clip_path, style_dict
+            )
+
+            if success:
+                generated.append({
+                    "name": clip_name,
+                    "index": i + 1,
+                    "transcript": clip.transcript,
+                    "start": round(clip.start, 2),
+                    "end": round(clip.end, 2),
+                    "duration": round(clip.speech_duration, 1),
+                    "url": f"/api/video/{job_id}/{clip_name}",
+                    "source": "AI Storyteller (Multiple clips)",
+                })
+
+        if not generated:
+            _update_job(job_id, status="error", progress=0,
+                        message="No clips were successfully rendered.")
+        else:
+            _update_job(job_id, status="done", progress=100,
+                        message=f"Done! Generated storytelling clip from {total} videos.",
+                        clips=generated)
+
+    except Exception as exc:
+        _update_job(job_id, status="error", progress=0, message=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +508,7 @@ async def _process_video(job_id: str, video_path: str):
 async def upload_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    style: str = Form(None),
 ):
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
@@ -159,6 +523,7 @@ async def upload_video(
         "progress": 2,
         "message": "Saving uploaded video...",
         "clips": [],
+        "logs": ["Saving uploaded video..."],
     }
 
     # Save upload
@@ -166,7 +531,51 @@ async def upload_video(
     with open(upload_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    background_tasks.add_task(_process_video, job_id, upload_path)
+    style_dict = json.loads(style) if style else {}
+    original_filename = file.filename or Path(upload_path).name
+    background_tasks.add_task(_process_video, job_id, upload_path, style_dict, original_filename)
+    return {"job_id": job_id}
+
+
+@app.post("/api/upload-batch")
+async def upload_batch(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    style: str = Form(None),
+):
+    if not files:
+        raise HTTPException(400, "No files provided")
+    if len(files) > 20:
+        raise HTTPException(400, "Maximum 20 files per batch")
+
+    for f in files:
+        ext = Path(f.filename or "").suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                400,
+                f"Unsupported file type '{ext}' in '{f.filename}'. "
+                f"Accepted: {', '.join(ALLOWED_EXTENSIONS)}",
+            )
+
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {
+        "status": "uploading",
+        "progress": 2,
+        "message": f"Saving {len(files)} video(s)...",
+        "clips": [],
+        "logs": [f"Saving {len(files)} video(s)..."],
+    }
+
+    saved_paths = []
+    for i, f in enumerate(files):
+        ext = Path(f.filename or "").suffix.lower()
+        upload_path = os.path.join(config.UPLOAD_DIR, f"{job_id}_{i}{ext}")
+        with open(upload_path, "wb") as out:
+            shutil.copyfileobj(f.file, out)
+        saved_paths.append(upload_path)
+
+    style_dict = json.loads(style) if style else {}
+    background_tasks.add_task(_process_videos_batch, job_id, saved_paths, style_dict)
     return {"job_id": job_id}
 
 
@@ -180,7 +589,28 @@ async def get_status(job_id: str):
         "progress": job["progress"],
         "message": job["message"],
         "clips": job.get("clips", []),
+        "logs": job.get("logs", []),
     }
+
+
+@app.get("/api/thumbnail/{job_id}/{clip_name}")
+async def serve_thumbnail(job_id: str, clip_name: str):
+    if ".." in clip_name or "/" in clip_name:
+        raise HTTPException(400, "Invalid clip name")
+    clip_path = os.path.join(_job_dir(job_id), clip_name)
+    if not os.path.exists(clip_path):
+        raise HTTPException(404, "Clip not found")
+    thumb_path = clip_path.replace(".mp4", "_thumb.jpg")
+    if not os.path.exists(thumb_path):
+        import subprocess as _sp
+        result = _sp.run(
+            ["ffmpeg", "-y", "-ss", "0", "-i", clip_path,
+             "-vframes", "1", "-q:v", "4", "-vf", "scale=180:-1", thumb_path],
+            capture_output=True,
+        )
+        if result.returncode != 0 or not os.path.exists(thumb_path):
+            raise HTTPException(500, "Thumbnail generation failed")
+    return FileResponse(thumb_path, media_type="image/jpeg")
 
 
 @app.get("/api/video/{job_id}/{clip_name}")
@@ -196,11 +626,18 @@ async def serve_clip(job_id: str, clip_name: str):
 
 @app.get("/api/download/{job_id}")
 async def download_all(job_id: str):
-    if job_id not in jobs or jobs[job_id]["status"] != "done":
+    # Accept if job is done in-memory OR if the output directory exists on disk
+    # (covers history entries after server restart)
+    jdir = _job_dir(job_id)
+    in_memory_done = job_id in jobs and jobs[job_id]["status"] == "done"
+    on_disk = Path(jdir).is_dir()
+    if not in_memory_done and not on_disk:
         raise HTTPException(400, "Job not ready or does not exist")
 
     jdir = _job_dir(job_id)
+    # Exclude _raw videos!
     clip_files = sorted(Path(jdir).glob("clip_*.mp4"))
+    clip_files = [f for f in clip_files if not f.name.endswith("_raw.mp4")]
 
     if not clip_files:
         raise HTTPException(404, "No clips found for this job")
@@ -220,6 +657,308 @@ async def download_all(job_id: str):
             "Content-Disposition": f'attachment; filename="clips_{job_id[:8]}.zip"'
         },
     )
+
+from pydantic import BaseModel
+
+class WordOverride(BaseModel):
+    word: str
+    start: float
+    end: float
+
+class RenderSubtitlesRequest(BaseModel):
+    font: str = "Poppins"
+    primary_color: str = "&H00FFFFFF"
+    bold: bool = True
+    italic: bool = False
+    text_case: str = "lowercase"
+    font_size: float = 4.0
+    letter_spacing: float = 0.0
+    alignment: str = "center"
+    has_outline: bool = False
+    outline_color: str = "&H00000000"
+    outline_width: int = 0
+    shadow_size: int = 2
+    shadow_x: float = 0.0
+    shadow_y: float = 0.0
+    shadow_color: str = "&H00000000"
+    has_bg: bool = False
+    bg_color: str = "&H00000000"
+    bg_opacity: int = 60
+    margin_v: float = 27.0
+    language: str = "id"
+    word_overrides: Optional[List[WordOverride]] = None
+
+@app.get("/api/video-raw/{job_id}/{clip_name}")
+async def serve_raw_clip(job_id: str, clip_name: str):
+    if ".." in clip_name or "/" in clip_name:
+        raise HTTPException(400, "Invalid clip name")
+    clip_path = os.path.join(_job_dir(job_id), clip_name.replace(".mp4", "_raw.mp4"))
+    if not os.path.exists(clip_path):
+        raise HTTPException(404, "Raw clip not found")
+    return FileResponse(clip_path, media_type="video/mp4")
+
+@app.get("/api/words/{job_id}/{clip_name}")
+async def get_words(job_id: str, clip_name: str):
+    if ".." in clip_name or "/" in clip_name:
+        raise HTTPException(400, "Invalid clip name")
+    words_path = os.path.join(_job_dir(job_id), clip_name.replace(".mp4", "_words.json"))
+    if not os.path.exists(words_path):
+        raise HTTPException(404, "Words file not found")
+    import json
+    with open(words_path, "r") as f:
+        return json.load(f)
+
+
+@app.post("/api/render-subtitles/{job_id}/{clip_name}")
+async def render_subtitles(job_id: str, clip_name: str, req: RenderSubtitlesRequest):
+    if ".." in clip_name or "/" in clip_name:
+        raise HTTPException(400, "Invalid clip name")
+
+    jdir = _job_dir(job_id)
+    raw_path = os.path.join(jdir, clip_name.replace(".mp4", "_raw.mp4"))
+    out_path = os.path.join(jdir, clip_name)
+    words_path = os.path.join(jdir, clip_name.replace(".mp4", "_words.json"))
+
+    if not os.path.exists(raw_path) or not os.path.exists(words_path):
+        raise HTTPException(404, "Required raw files missing")
+
+    try:
+        import json
+        with open(words_path, "r") as f:
+            wdata = json.load(f)
+
+        # If word_overrides provided, replace word text while keeping original timestamps
+        if req.word_overrides:
+            overrides = {i: o.word for i, o in enumerate(req.word_overrides)}
+            for i, w in enumerate(wdata):
+                if i in overrides:
+                    w["word"] = overrides[i]
+            # Persist edited words so future re-applies keep the corrections
+            with open(words_path, "w") as f:
+                json.dump(wdata, f)
+
+        words = [WordSegment(**w) for w in wdata]
+
+        ass_path = out_path.replace(".mp4", "_custom.ass")
+        from .clipper import _generate_ass, _burn_ass
+
+        style = req.model_dump(exclude={"word_overrides"})
+        _generate_ass(words, ass_path, style=style)
+        success = await asyncio.to_thread(_burn_ass, raw_path, ass_path, out_path)
+
+        if os.path.exists(ass_path):
+            os.remove(ass_path)
+
+        if not success:
+            raise HTTPException(500, "Failed to burn subtitles")
+
+        return {"success": True, "url": f"/api/video/{job_id}/{clip_name}"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ---------------------------------------------------------------------------
+# Reprocess: re-clip from cached transcription (skip upload + Whisper)
+# ---------------------------------------------------------------------------
+
+async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional[dict] = None):
+    """Re-clip an already-transcribed video using its cached transcription.json."""
+    jdir = _job_dir(job_id)
+    os.makedirs(jdir, exist_ok=True)
+    try:
+        source_jdir = _job_dir(source_job_id)
+        meta_path = os.path.join(source_jdir, "meta.json")
+        trans_path = os.path.join(source_jdir, "transcription.json")
+
+        if not os.path.exists(meta_path):
+            raise ValueError("No metadata found for this job. Was it uploaded via single-video mode?")
+        if not os.path.exists(trans_path):
+            raise ValueError("No transcription cache found. Re-upload the video to generate one.")
+
+        with open(meta_path) as f:
+            meta = json.load(f)
+        video_path = meta["video_path"]
+        filename = meta.get("filename", Path(video_path).name)
+
+        if not os.path.exists(video_path):
+            raise ValueError(f"Original video file no longer exists: {filename}")
+
+        with open(trans_path) as f:
+            wdata = json.load(f)
+        words = [WordSegment(**w) for w in wdata]
+
+        _update_job(job_id, status="clipping", progress=30,
+                    message=f"Loaded {len(words)} cached words from '{filename}'. Analyzing scenes...")
+
+        utterances = await asyncio.to_thread(_group_into_utterances, words)
+        if not utterances:
+            raise ValueError("No speech utterances found in the cached transcription.")
+
+        _update_job(job_id, status="clipping", progress=38,
+                    message=f"AI composing story clips from {len(utterances)} utterances...")
+        from .llm import compose_story_clips
+        utt_data = [
+            {"id": i, "text": u.text, "duration": round(u.duration, 2), "start": round(u.start, 1)}
+            for i, u in enumerate(utterances)
+            if u.duration > 0.3
+        ]
+        content_type = style_dict.get("content_type", "retail") if style_dict else "retail"
+        composed_stories = await asyncio.to_thread(compose_story_clips, utt_data, content_type)
+
+        if not composed_stories:
+            _update_job(job_id, message="Story composition failed — falling back to scene detection...")
+            raw_clips = await asyncio.to_thread(build_clips, words)
+            composed_stories = [
+                {"utterance_ids": None, "_clip": c, "score": None, "summary": ""}
+                for c in raw_clips
+            ]
+
+        _RENDER_CAP = config.MAX_CLIP_DURATION - 5.0  # 40s headroom for padding
+        clips_with_meta = []
+        print(f"[BUILD] Assembling {len(composed_stories)} stories into clip objects...")
+        for story in composed_stories:
+            if story.get("_clip"):
+                clips_with_meta.append((story["_clip"], story))
+                continue
+            sel_ids = story.get("utterance_ids", [])
+            sel_utts = [utterances[i] for i in sel_ids if i < len(utterances)]
+            if len(sel_utts) < 2:
+                print(f"  [SKIP] story {story.get('clip_type','?')} — only {len(sel_utts)} utterances resolved")
+                continue
+            trimmed, total_speech = [], 0.0
+            for u in sel_utts:
+                if total_speech + u.duration > _RENDER_CAP:
+                    break
+                trimmed.append(u)
+                total_speech += u.duration
+            if len(trimmed) >= 1:
+                sel_utts = trimmed
+            else:
+                sel_utts = sel_utts[:2]
+
+            total_speech = sum(u.duration for u in sel_utts)
+            print(f"  [STORY] {story.get('clip_type','?'):12s} | score={story.get('score','?')} | "
+                  f"{len(sel_utts)} utts | speech={total_speech:.1f}s")
+
+            # AUTO-HARNESS: expand if speech < MIN_CLIP
+            if total_speech < config.MIN_CLIP_DURATION and sel_ids:
+                valid_ids = [i for i in sel_ids if i < len(utterances)]
+                if valid_ids:
+                    min_idx, max_idx = min(valid_ids), max(valid_ids)
+                    print(f"  [HARNESS] speech={total_speech:.1f}s < MIN={config.MIN_CLIP_DURATION}s — expanding...")
+                    fwd = max_idx + 1
+                    while total_speech < config.MIN_CLIP_DURATION and fwd < len(utterances):
+                        u = utterances[fwd]
+                        if u.duration > 0.3:
+                            sel_utts.append(u)
+                            total_speech += u.duration
+                            print(f"  [HARNESS] +fwd[{fwd}] {u.duration:.1f}s → total={total_speech:.1f}s")
+                        fwd += 1
+                    if total_speech < config.MIN_CLIP_DURATION:
+                        bwd = min_idx - 1
+                        while total_speech < config.MIN_CLIP_DURATION and bwd >= 0:
+                            u = utterances[bwd]
+                            if u.duration > 0.3:
+                                sel_utts.insert(0, u)
+                                total_speech += u.duration
+                                print(f"  [HARNESS] +bwd[{bwd}] {u.duration:.1f}s → total={total_speech:.1f}s")
+                            bwd -= 1
+                    seen_ids = set()
+                    deduped = []
+                    for u in sel_utts:
+                        uid = id(u)
+                        if uid not in seen_ids:
+                            seen_ids.add(uid)
+                            deduped.append(u)
+                    sel_utts = sorted(deduped, key=lambda u: u.start)
+                    total_speech = sum(u.duration for u in sel_utts)
+                    print(f"  [HARNESS] Final: {len(sel_utts)} utts | speech={total_speech:.1f}s")
+
+            all_words = [w for u in sel_utts for w in u.words]
+            segments = _words_to_segments(all_words, config.WORD_GAP_THRESHOLD) if all_words else [(u.start, u.end) for u in sel_utts]
+            clip = Clip(
+                segments=segments,
+                start=sel_utts[0].start,
+                end=sel_utts[-1].end,
+                transcript=" ".join(u.text for u in sel_utts),
+                words=all_words,
+                index=len(clips_with_meta) + 1,
+            )
+            print(f"  [CLIP] #{len(clips_with_meta)+1} built | wall={clip.wall_duration:.1f}s | speech={clip.speech_duration:.1f}s")
+            clips_with_meta.append((clip, story))
+
+        print(f"[BUILD] {len(clips_with_meta)} clips ready for rendering")
+
+        if not clips_with_meta:
+            raise ValueError("AI could not compose any complete customer interaction clips.")
+
+        _update_job(job_id, status="rendering", progress=45,
+                    message=f"Composed {len(clips_with_meta)} story clip(s). Detecting orientation...")
+
+        crop_filter = await asyncio.to_thread(get_portrait_crop_filter, video_path)
+        if crop_filter:
+            _update_job(job_id, message="Landscape video detected — auto-reframing to 9:16...")
+
+        _update_job(job_id, progress=48, message=f"Rendering {len(clips_with_meta)} clip(s)...")
+
+        generated = []
+        for render_idx, (clip, story) in enumerate(clips_with_meta):
+            clip_name = f"clip_{render_idx + 1:03d}.mp4"
+            clip_path = os.path.join(jdir, clip_name)
+            _update_job(job_id, progress=48 + int(47 * (render_idx / len(clips_with_meta))),
+                        message=f"Rendering clip {render_idx + 1} of {len(clips_with_meta)}...")
+            success = await asyncio.to_thread(
+                create_clip_video, video_path, clip, clip_path, crop_filter, style_dict
+            )
+            if success:
+                generated.append({
+                    "name": clip_name,
+                    "index": render_idx + 1,
+                    "transcript": clip.transcript,
+                    "start": round(clip.start, 2),
+                    "end": round(clip.end, 2),
+                    "duration": round(clip.speech_duration, 1),
+                    "url": f"/api/video/{job_id}/{clip_name}",
+                    "source": filename,
+                    "score": story.get("score"),
+                    "score_summary": story.get("summary", ""),
+                    "caption": story.get("caption", ""),
+                    "score_metrics": {},
+                })
+
+        if not generated:
+            raise ValueError("No clips were successfully rendered.")
+
+        # Copy transcription cache to the new job dir too
+        import shutil
+        shutil.copy(trans_path, os.path.join(jdir, "transcription.json"))
+        with open(os.path.join(jdir, "meta.json"), "w") as mf:
+            json.dump({"video_path": video_path, "filename": filename}, mf)
+
+        _update_job(job_id, status="done", progress=100,
+                    message=f"Done! Re-generated {len(generated)} clips (cached transcription).",
+                    clips=generated)
+    except Exception as exc:
+        _update_job(job_id, status="error", progress=0, message=str(exc))
+
+
+@app.post("/api/reprocess/{source_job_id}")
+async def reprocess_video(
+    source_job_id: str,
+    background_tasks: BackgroundTasks,
+    style: str = Form(None),
+):
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {
+        "status": "clipping",
+        "progress": 5,
+        "message": "Loading cached transcription...",
+        "clips": [],
+        "logs": ["Loading cached transcription..."],
+    }
+    style_dict = json.loads(style) if style else {}
+    background_tasks.add_task(_reprocess_video, job_id, source_job_id, style_dict)
+    return {"job_id": job_id}
 
 
 # ---------------------------------------------------------------------------

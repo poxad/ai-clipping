@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from openai import OpenAI
 
@@ -50,28 +50,39 @@ def get_audio_duration(audio_path: str) -> float:
     return int(h) * 3600 + int(m) * 60 + float(s)
 
 
-def transcribe(audio_path: str) -> List[WordSegment]:
+def transcribe(audio_path: str, language: Optional[str] = None, prompt: Optional[str] = None) -> List[WordSegment]:
     """
     Transcribe audio using OpenAI Whisper API with word-level timestamps.
     Automatically chunks audio if it exceeds the 25MB API limit.
+
+    prompt: optional text to steer Whisper toward custom vocabulary / brand names.
     """
     client = OpenAI(api_key=config.OPENAI_API_KEY)
     file_size = os.path.getsize(audio_path)
+    if not language:
+        language = config.WHISPER_LANGUAGE
+
+    # Merge config-level prompt with any runtime-supplied extra terms
+    base_prompt = config.WHISPER_PROMPT or ""
+    extra_prompt = (prompt or "").strip()
+    combined_prompt = (base_prompt.rstrip(".，, ") + ". " + extra_prompt).strip(". ") if extra_prompt else base_prompt
+    final_prompt = combined_prompt or None
 
     if file_size <= config.WHISPER_MAX_BYTES:
-        return _transcribe_file(client, audio_path)
+        return _transcribe_file(client, audio_path, language, final_prompt)
     else:
-        return _transcribe_chunked(client, audio_path)
+        return _transcribe_chunked(client, audio_path, language, final_prompt)
 
 
-def _transcribe_file(client: OpenAI, audio_path: str) -> List[WordSegment]:
+def _transcribe_file(client: OpenAI, audio_path: str, language: str, prompt: Optional[str] = None) -> List[WordSegment]:
     with open(audio_path, "rb") as f:
         response = client.audio.transcriptions.create(
             model="whisper-1",
             file=f,
-            language=config.WHISPER_LANGUAGE,
+            language=language,
             response_format="verbose_json",
             timestamp_granularities=["word"],
+            **({"prompt": prompt} if prompt else {}),
         )
 
     words: List[WordSegment] = []
@@ -83,7 +94,7 @@ def _transcribe_file(client: OpenAI, audio_path: str) -> List[WordSegment]:
     return words
 
 
-def _transcribe_chunked(client: OpenAI, audio_path: str) -> List[WordSegment]:
+def _transcribe_chunked(client: OpenAI, audio_path: str, language: str, prompt: Optional[str] = None) -> List[WordSegment]:
     """Split audio into chunks and transcribe each, adjusting timestamps."""
     total_duration = get_audio_duration(audio_path)
     chunk_dur = config.AUDIO_CHUNK_DURATION
@@ -108,7 +119,7 @@ def _transcribe_chunked(client: OpenAI, audio_path: str) -> List[WordSegment]:
                 check=True,
             )
 
-            chunk_words = _transcribe_file(client, chunk_path)
+            chunk_words = _transcribe_file(client, chunk_path, language, prompt)
             for w in chunk_words:
                 w.start += offset
                 w.end += offset

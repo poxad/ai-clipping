@@ -9,3 +9,4 @@ outputs/
 *.avi
 *.mkv
 .DS_Store
+.gstack/

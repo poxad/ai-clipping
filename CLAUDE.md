@@ -99,3 +99,17 @@ OUTPUT_DIR=outputs
 - [ ] TikTok auto-scheduler (80 accounts)
 - [ ] Store dashboard (monitor upload status per store)
 - [ ] Persistent job storage (SQLite)
+
+## gstack
+
+For all web browsing tasks, use the `/browse` skill from gstack. Never use `mcp__claude-in-chrome__*` tools directly.
+
+### Setup (run once per machine)
+```bash
+git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack
+cd ~/.claude/skills/gstack && ./setup
+```
+> Requires `bun`. If not installed: `curl -fsSL https://bun.sh/install | BUN_VERSION=1.3.10 bash`
+
+### Available skills
+`/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/retro`, `/investigate`, `/document-release`, `/codex`, `/cso`, `/autoplan`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`
