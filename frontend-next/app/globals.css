@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@source "../app";
+@source "../components";
+@source "../lib";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-bg:       #f7f6f3;
+  --color-sidebar:  #ffffff;
+  --color-card:     #ffffff;
+  --color-card2:    #efede8;
+  --color-border:   #e4e1da;
+  --color-border2:  #cac7be;
+  --color-text:     #1c1917;
+  --color-muted:    #706d67;
+  --color-muted2:   #9e9b94;
+  --color-accent:   #6d28d9;
+  --color-accent2:  #e11d48;
+  --color-success:  #16a34a;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+
+  --radius-card: 12px;
+  --radius-sm:   8px;
+}
+
+:root {
+  --sidebar-w: 248px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+html, body {
+  background-color: #f7f6f3;
+  color: #1c1917;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cac7be; border-radius: 3px; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6d28d9, #e11d48);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Gradient border button */
+.btn-gradient {
+  background: linear-gradient(135deg, #6d28d9, #e11d48);
+  color: white;
+  font-weight: 600;
+}
+
+.btn-gradient:hover {
+  opacity: 0.88;
+}
+
+/* Card shadow utility */
+.card-shadow {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* ── Subtitle Template iPhone Mockup ───────────────────── */
+
+.video-frame {
+  width: 243px; height: 432px;
+  background: #111;
+  position: relative; overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+
+.video-frame::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+  opacity: 0.6;
+}
+
+.video-frame::after {
+  content: '9:16';
+  position: absolute; top: 8px; left: 8px;
+  font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.3);
+  letter-spacing: 0.5px; z-index: 5;
+}
+
+.tiktok-ui {
+  position: absolute; inset: 0; pointer-events: none; z-index: 5;
+}
+.tiktok-right {
+  position: absolute; right: 8px; bottom: 80px;
+  display: flex; flex-direction: column; gap: 16px; align-items: center;
+}
+.tt-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); }
+.tt-btn.small { width: 28px; height: 28px; }
+
+.tiktok-bottom {
+  position: absolute; left: 12px; bottom: 20px; right: 60px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.tt-name { width: 40%; height: 14px; background: rgba(255,255,255,0.8); border-radius: 4px; }
+.tt-desc { width: 80%; height: 10px; background: rgba(255,255,255,0.4); border-radius: 4px; }
+.tt-music { width: 50%; height: 10px; background: rgba(255,255,255,0.3); border-radius: 4px; margin-top: 4px; }

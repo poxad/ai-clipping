@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/jasonjo/Documents/Kuliah/ai-clipping/backend/**)",
+      "Read(//Users/jasonjo/Documents/Kuliah/ai-clipping/**)",
+      "Bash(curl -s http://localhost:8000/api/tiktok/auth-url)",
+      "Bash(fc-list)",
+      "Bash(system_profiler SPFontsDataType)",
+      "Read(//Users/jasonjo/Library/Fonts/**)",
+      "Bash(brew install:*)",
+      "Bash(/opt/homebrew/bin/brew install:*)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//Library/Fonts/**)",
+      "Bash(sqlite3 scheduler.db \"SELECT id, clip_name, status, error_message, scheduled_at FROM scheduled_posts ORDER BY scheduled_at DESC LIMIT 5;\")",
+      "Bash(sqlite3 scheduler.db \"SELECT clip_name, status, error_message FROM scheduled_posts ORDER BY created_at DESC LIMIT 10;\")"
+    ],
+    "additionalDirectories": [
+      "/Users/jasonjo/Documents/Kuliah/ai-clipping/frontend-next/app/history",
+      "/Users/jasonjo/Documents/Kuliah/ai-clipping/frontend-next/app"
+    ]
+  }
+}
