@@ -77,11 +77,18 @@ WHISPER_LANGUAGE: str = "id"
 # Example: "Kacamata Moo, lensa kontak, frame, minus, silinder, cek mata."
 WHISPER_PROMPT: str = os.getenv("WHISPER_PROMPT", "")
 
+# --- Supabase ---
+
+SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_CLIPS_BUCKET: str = "clips"
+SUPABASE_UPLOADS_BUCKET: str = "uploads"
+
 # --- TikTok integration ---
 
-TIKTOK_CLIENT_KEY: str = os.getenv("TIKTOK_CLIENT_KEY", "")
-TIKTOK_CLIENT_SECRET: str = os.getenv("TIKTOK_CLIENT_SECRET", "")
-TIKTOK_REDIRECT_URI: str = os.getenv("TIKTOK_REDIRECT_URI", "http://localhost:8000/api/tiktok/callback")
+TIKTOK_CLIENT_KEY: str = os.getenv("TIKTOK_CLIENT_KEY")
+TIKTOK_CLIENT_SECRET: str = os.getenv("TIKTOK_CLIENT_SECRET")
+TIKTOK_REDIRECT_URI: str = os.getenv("TIKTOK_REDIRECT_URI")
 
 # SQLite database for scheduler
 DB_PATH: str = os.getenv("DB_PATH", "scheduler.db")

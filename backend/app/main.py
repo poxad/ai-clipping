@@ -13,7 +13,7 @@ import zipfile
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +25,8 @@ from .clipper import Clip, build_clips, create_clip_video, _group_into_utterance
 from .reframer import get_portrait_crop_filter
 from .transcriber import WordSegment, extract_audio, transcribe
 from .scheduler import router as scheduler_router, scheduler_loop
+from .jobstore import init_db, create_job, update_job as _store_update, get_job
+from .storage import upload_clip, upload_raw
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -32,6 +34,7 @@ from .scheduler import router as scheduler_router, scheduler_loop
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db()
     task = asyncio.create_task(scheduler_loop())
     yield
     task.cancel()
@@ -50,9 +53,6 @@ os.makedirs(config.OUTPUT_DIR, exist_ok=True)
 
 app.include_router(scheduler_router)
 
-# In-memory job store (prototype — replace with SQLite/Redis for production)
-jobs: Dict[str, dict] = {}
-
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 
 
@@ -61,12 +61,7 @@ ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 # ---------------------------------------------------------------------------
 
 def _update_job(job_id: str, **kwargs):
-    if "message" in kwargs and kwargs["message"]:
-        if "logs" not in jobs[job_id]:
-            jobs[job_id]["logs"] = []
-        if not jobs[job_id]["logs"] or jobs[job_id]["logs"][-1] != kwargs["message"]:
-            jobs[job_id]["logs"].append(kwargs["message"])
-    jobs[job_id].update(kwargs)
+    _store_update(job_id, **kwargs)
 
 
 def _job_dir(job_id: str) -> str:
@@ -230,6 +225,13 @@ async def _process_single_video(
                 words=all_words,
                 index=len(clips_with_meta) + 1,
             )
+
+            # Hard cap on wall duration — clips spanning huge silences take forever to render
+            MAX_WALL = 90.0
+            if clip.wall_duration > MAX_WALL:
+                print(f"  [SKIP] wall={clip.wall_duration:.1f}s > {MAX_WALL}s cap — dropping")
+                continue
+
             print(f"  [CLIP] #{len(clips_with_meta)+1} built | wall={clip.wall_duration:.1f}s | speech={clip.speech_duration:.1f}s")
             clips_with_meta.append((clip, story))
 
@@ -268,6 +270,10 @@ async def _process_single_video(
             )
 
             if success:
+                # Upload to Supabase Storage; fall back to Railway URL if unavailable
+                supabase_url = await asyncio.to_thread(upload_clip, job_id, clip_name, clip_path)
+                clip_url = supabase_url or f"/api/video/{job_id}/{clip_name}"
+
                 generated.append({
                     "name": clip_name,
                     "index": global_index,
@@ -275,7 +281,7 @@ async def _process_single_video(
                     "start": round(clip.start, 2),
                     "end": round(clip.end, 2),
                     "duration": round(clip.speech_duration, 1),
-                    "url": f"/api/video/{job_id}/{clip_name}",
+                    "url": clip_url,
                     "source": source_name,
                     "score": story.get("score"),
                     "score_summary": story.get("summary", ""),
@@ -300,9 +306,10 @@ async def _process_video(
 ):
     jdir = _job_dir(job_id)
     os.makedirs(jdir, exist_ok=True)
-    # Save meta so re-clip can find the video
     with open(os.path.join(jdir, "meta.json"), "w") as mf:
         json.dump({"video_path": video_path, "filename": original_filename}, mf)
+    # Upload original to Supabase Storage (best-effort, don't block pipeline)
+    await asyncio.to_thread(upload_raw, job_id, original_filename, video_path)
     try:
         clips = await _process_single_video(job_id, video_path, jdir, style_dict=style_dict)
         _update_job(job_id, status="done", progress=100,
@@ -518,13 +525,8 @@ async def upload_video(
         )
 
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-        "status": "uploading",
-        "progress": 2,
-        "message": "Saving uploaded video...",
-        "clips": [],
-        "logs": ["Saving uploaded video..."],
-    }
+    create_job(job_id, status="uploading", progress=2,
+               message="Saving uploaded video...", logs=["Saving uploaded video..."])
 
     # Save upload
     upload_path = os.path.join(config.UPLOAD_DIR, f"{job_id}{ext}")
@@ -558,13 +560,8 @@ async def upload_batch(
             )
 
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-        "status": "uploading",
-        "progress": 2,
-        "message": f"Saving {len(files)} video(s)...",
-        "clips": [],
-        "logs": [f"Saving {len(files)} video(s)..."],
-    }
+    msg = f"Saving {len(files)} video(s)..."
+    create_job(job_id, status="uploading", progress=2, message=msg, logs=[msg])
 
     saved_paths = []
     for i, f in enumerate(files):
@@ -581,9 +578,9 @@ async def upload_batch(
 
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
-    if job_id not in jobs:
+    job = get_job(job_id)
+    if not job:
         raise HTTPException(404, "Job not found")
-    job = jobs[job_id]
     return {
         "status": job["status"],
         "progress": job["progress"],
@@ -629,9 +626,10 @@ async def download_all(job_id: str):
     # Accept if job is done in-memory OR if the output directory exists on disk
     # (covers history entries after server restart)
     jdir = _job_dir(job_id)
-    in_memory_done = job_id in jobs and jobs[job_id]["status"] == "done"
+    _job = get_job(job_id)
+    db_done = _job is not None and _job["status"] == "done"
     on_disk = Path(jdir).is_dir()
-    if not in_memory_done and not on_disk:
+    if not db_done and not on_disk:
         raise HTTPException(400, "Job not ready or does not exist")
 
     jdir = _job_dir(job_id)
@@ -949,13 +947,8 @@ async def reprocess_video(
     style: str = Form(None),
 ):
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-        "status": "clipping",
-        "progress": 5,
-        "message": "Loading cached transcription...",
-        "clips": [],
-        "logs": ["Loading cached transcription..."],
-    }
+    create_job(job_id, status="clipping", progress=5,
+               message="Loading cached transcription...", logs=["Loading cached transcription..."])
     style_dict = json.loads(style) if style else {}
     background_tasks.add_task(_reprocess_video, job_id, source_job_id, style_dict)
     return {"job_id": job_id}

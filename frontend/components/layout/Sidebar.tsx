@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Scissors, Upload, History, Settings, Calendar, BookOpen } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Scissors, Upload, History, Settings, Calendar, BookOpen, LogOut, ChevronUp, User } from "lucide-react";
 import { useHistory } from "@/lib/useHistory";
+import { createClient } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
 
 const nav = [
   { href: "/upload", label: "Upload & Clip", desc: "Create new clips", icon: Upload },
@@ -15,7 +17,61 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { history } = useHistory();
+  const [user, setUser] = useState<{ email?: string; name?: string } | null>(null);
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sb = createClient();
+    sb.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser({
+          email: data.user.email,
+          name: data.user.user_metadata?.full_name,
+        });
+      }
+    });
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function handleLogout() {
+    const sb = createClient();
+    await sb.auth.signOut();
+    setOpen(false);
+    router.push("/login");
+  }
+
+  // Avatar initials
+  const initials = user?.name
+    ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+    : user?.email
+    ? user.email[0].toUpperCase()
+    : "?";
 
   return (
     <aside
@@ -59,9 +115,7 @@ export function Sidebar() {
             >
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: active ? "rgba(109,40,217,0.12)" : "rgba(0,0,0,0.04)",
-                }}
+                style={{ background: active ? "rgba(109,40,217,0.12)" : "rgba(0,0,0,0.04)" }}
               >
                 <Icon className="w-3.5 h-3.5" style={{ color: active ? "#6d28d9" : "#9e9b94" }} />
               </div>
@@ -83,7 +137,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom stats */}
-      <div className="px-4 py-4" style={{ borderTop: "1px solid #e4e1da" }}>
+      <div className="px-4 pt-4" style={{ borderTop: "1px solid #e4e1da" }}>
         <div
           className="rounded-xl px-3 py-3 flex flex-col gap-2"
           style={{ background: "#ffffff", border: "1px solid #e4e1da" }}
@@ -94,6 +148,89 @@ export function Sidebar() {
           <StatRow label="Total clips" value={history.reduce((a, h) => a + h.count, 0)} />
           <StatRow label="Jobs processed" value={history.length} />
         </div>
+      </div>
+
+      {/* Profile */}
+      <div className="px-4 py-4" ref={dropdownRef} style={{ position: "relative" }}>
+        {/* Dropdown — anchored above the button */}
+        {open && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "calc(100% - 12px)",
+              left: 16,
+              right: 16,
+              background: "#ffffff",
+              border: "1px solid #e4e1da",
+              borderRadius: 14,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              overflow: "hidden",
+              zIndex: 50,
+            }}
+          >
+            {/* User info */}
+            <div className="px-4 py-3" style={{ borderBottom: "1px solid #f0ede8" }}>
+              <div className="text-xs font-bold" style={{ color: "#1c1917" }}>
+                {user?.name || "Account"}
+              </div>
+              <div className="text-xs mt-0.5 truncate" style={{ color: "#9e9b94" }}>
+                {user?.email || "Not logged in"}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-1.5">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                style={{ color: "#dc2626", background: "transparent" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(220,38,38,0.06)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Log out
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Profile button */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
+          style={{
+            background: open ? "rgba(109,40,217,0.06)" : "#ffffff",
+            border: `1px solid ${open ? "rgba(109,40,217,0.2)" : "#e4e1da"}`,
+          }}
+        >
+          {/* Avatar */}
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
+            style={{
+              background: user
+                ? "linear-gradient(135deg, #6d28d9, #7c3aed)"
+                : "rgba(0,0,0,0.06)",
+              color: user ? "#fff" : "#9e9b94",
+            }}
+          >
+            {user ? initials : <User className="w-3.5 h-3.5" />}
+          </div>
+
+          {/* Name / email */}
+          <div className="flex-1 min-w-0 text-left">
+            <div className="text-xs font-semibold truncate" style={{ color: "#1c1917" }}>
+              {user?.name || user?.email?.split("@")[0] || "Guest"}
+            </div>
+            <div className="text-xs truncate" style={{ color: "#9e9b94" }}>
+              {user ? "Logged in" : "Not signed in"}
+            </div>
+          </div>
+
+          <ChevronUp
+            className="w-3.5 h-3.5 flex-shrink-0 transition-transform"
+            style={{ color: "#c4c1bb", transform: open ? "rotate(0deg)" : "rotate(180deg)" }}
+          />
+        </button>
       </div>
     </aside>
   );

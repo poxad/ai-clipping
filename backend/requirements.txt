@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 aiofiles==23.2.1
 mediapipe
 opencv-python-headless
+supabase>=2.3.0

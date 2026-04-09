@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { ClipsGrid } from "@/components/clips/ClipsGrid";
 import { ScheduleModal } from "@/components/scheduler/ScheduleModal";
+import { getStatus } from "@/lib/api";
+import { useHistory } from "@/lib/useHistory";
 import type { Clip, HistoryEntry } from "@/lib/types";
 
 const KEY = "ai_clip_history";
@@ -13,45 +15,128 @@ const KEY = "ai_clip_history";
 export default function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [entry, setEntry] = useState<HistoryEntry | null>(null);
+  const { addEntry } = useHistory();
+
+  // undefined = still loading, null = not found, HistoryEntry = found
+  const [entry, setEntry] = useState<HistoryEntry | null | undefined>(undefined);
+  const [polling, setPolling] = useState(false);
+  const [pollMessage, setPollMessage] = useState("");
   const [scheduleClip, setScheduleClip] = useState<Clip | null>(null);
 
   useEffect(() => {
+    // 1. Try localStorage first (instant)
     try {
       const raw = localStorage.getItem(KEY);
-      if (!raw) return;
-      const history: HistoryEntry[] = JSON.parse(raw);
-      const found = history.find((e) => e.jobId === id);
-      setEntry(found ?? null);
+      if (raw) {
+        const history: HistoryEntry[] = JSON.parse(raw);
+        const found = history.find((e) => e.jobId === id);
+        if (found) {
+          setEntry(found);
+          return;
+        }
+      }
     } catch {}
+
+    // 2. Not in localStorage — poll the backend until done or error
+    setPolling(true);
+    let timer: ReturnType<typeof setInterval>;
+
+    async function poll() {
+      try {
+        const data = await getStatus(id);
+
+        if (data.status === "done" && data.clips?.length) {
+          clearInterval(timer);
+          setPolling(false);
+          const e: HistoryEntry = {
+            jobId: id,
+            clips: data.clips,
+            count: data.clips.length,
+            date: new Date().toLocaleString(),
+          };
+          addEntry(id, data.clips);
+          setEntry(e);
+        } else if (data.status === "error") {
+          clearInterval(timer);
+          setPolling(false);
+          setEntry(null);
+        } else {
+          // Still processing — show progress to user
+          setPollMessage(data.message || "Processing…");
+        }
+      } catch {
+        // Job not found on backend at all
+        clearInterval(timer);
+        setPolling(false);
+        setEntry(null);
+      }
+    }
+
+    poll();
+    timer = setInterval(poll, 2000);
+    return () => clearInterval(timer);
   }, [id]);
 
-  if (entry === null) {
+  // ── Still loading / polling ──
+  if (entry === undefined) {
     return (
       <div className="flex flex-col gap-6 p-8 max-w-5xl w-full">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/history"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={{ background: "#ffffff", color: "#706d67", border: "1px solid #e4e1da", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to History
-          </Link>
-        </div>
+        <Link
+          href="/history"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium w-fit"
+          style={{ background: "#ffffff", color: "#706d67", border: "1px solid #e4e1da" }}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> History
+        </Link>
+
         <div
-          className="flex flex-col items-center justify-center py-24 rounded-xl border"
+          className="flex flex-col items-center justify-center gap-4 py-24 rounded-xl border"
           style={{ background: "#ffffff", borderColor: "#e4e1da" }}
         >
-          <p className="font-semibold text-sm" style={{ color: "#1c1917" }}>Job not found</p>
-          <p className="text-sm mt-1" style={{ color: "#9e9b94" }}>This job may have been cleared from history.</p>
+          {polling ? (
+            <>
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#6d28d9" }} />
+              <div className="text-center">
+                <p className="font-semibold text-sm" style={{ color: "#1c1917" }}>Still processing…</p>
+                <p className="text-xs mt-1" style={{ color: "#9e9b94" }}>{pollMessage || "Rendering clips, hang tight"}</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full" style={{ background: "rgba(109,40,217,0.07)", color: "#6d28d9" }}>
+                This page will update automatically when done
+              </div>
+            </>
+          ) : (
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#9e9b94" }} />
+          )}
         </div>
       </div>
     );
   }
 
+  // ── Not found ──
+  if (entry === null) {
+    return (
+      <div className="flex flex-col gap-6 p-8 max-w-5xl w-full">
+        <Link
+          href="/history"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit"
+          style={{ background: "#ffffff", color: "#706d67", border: "1px solid #e4e1da" }}
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to History
+        </Link>
+        <div
+          className="flex flex-col items-center justify-center py-24 rounded-xl border"
+          style={{ background: "#ffffff", borderColor: "#e4e1da" }}
+        >
+          <p className="font-semibold text-sm" style={{ color: "#1c1917" }}>Job not found</p>
+          <p className="text-sm mt-1" style={{ color: "#9e9b94" }}>This job may have been cleared or failed.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Found ──
   return (
     <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -63,23 +148,9 @@ export default function HistoryDetailPage() {
               <ArrowLeft className="w-3.5 h-3.5" /> History
             </Link>
           </div>
-          {/* <h1 className="text-2xl font-bold" style={{ color: "#1c1917" }}>
-            {entry.count} Clip{entry.count !== 1 ? "s" : ""}
-          </h1>
-          <div className="flex items-center gap-4 mt-1.5">
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: "#9e9b94" }}>
-              <Hash className="w-3 h-3" />
-              {entry.jobId.slice(0, 12)}…
-            </span>
-            <span className="flex items-center gap-1.5 text-xs" style={{ color: "#9e9b94" }}>
-              <Calendar className="w-3 h-3" />
-              {entry.date}
-            </span>
-          </div> */}
         </div>
       </div>
 
-      {/* Clips */}
       <ClipsGrid
         clips={entry.clips}
         jobId={entry.jobId}

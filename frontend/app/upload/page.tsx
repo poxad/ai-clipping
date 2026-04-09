@@ -74,8 +74,7 @@ export default function UploadPage() {
   }
 
   async function startSingle(file: File) {
-    const style = buildStyle();
-    if (!style) return;
+    const style = buildStyle() ?? ({} as StylePayload);
     setError(null);
     setUploading(true);
     try {

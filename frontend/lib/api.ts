@@ -1,6 +1,6 @@
 import type { JobState, StylePayload, TikTokAccount, ScheduledPost } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL;
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function toAssColor(hex: string): string {
   const h = hex.replace("#", "");
