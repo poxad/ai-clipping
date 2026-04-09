@@ -965,4 +965,5 @@ async def reprocess_video(
 # Serve frontend (must be last — catches all unmatched routes)
 # ---------------------------------------------------------------------------
 
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+if os.path.isdir("frontend"):
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
