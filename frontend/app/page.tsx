@@ -12,7 +12,7 @@ import { useJob } from "@/lib/JobContext";
 import { useHistory } from "@/lib/useHistory";
 import { uploadSingle, uploadBatch } from "@/lib/api";
 import type { Clip, StylePayload } from "@/lib/types";
-import { Store, Mic, ChevronDown, ChevronUp, Wand2 } from "lucide-react";
+import { Store, Mic, ChevronDown, ChevronUp, Wand2, Check, X, Play } from "lucide-react";
 
 type Mode = "single" | "batch";
 type ContentType = "retail" | "podcast";
@@ -40,6 +40,7 @@ export default function UploadPage() {
   const [mode] = useState<Mode>("single");
   const [contentType, setContentType] = useState<ContentType>("retail");
   const [whisperVocab, setWhisperVocab] = useState<string>("kacamata moo\nwhatsapp");
+  const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +80,11 @@ export default function UploadPage() {
     }
   }
 
+  async function handleProcess() {
+    if (!stagedFile) return;
+    await startSingle(stagedFile);
+  }
+
   async function startBatch() {
     const style = buildStyle();
     if (!style || !batchFiles.length) return;
@@ -96,6 +102,7 @@ export default function UploadPage() {
 
   function handleReset() {
     reset();
+    setStagedFile(null);
     setBatchFiles([]);
     setError(null);
   }
@@ -165,12 +172,39 @@ export default function UploadPage() {
           style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
         >
           <SectionLabel step={2} title="Upload your video" desc="Drop a raw recording — unedited is totally fine" />
-          <UploadZone
-            mode={mode}
-            disabled={uploading}
-            onSingleFile={startSingle}
-            onBatchFiles={(files) => setBatchFiles(files)}
-          />
+
+          {stagedFile ? (
+            /* Staged file pill */
+            <div
+              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+              style={{ background: "rgba(22,163,74,0.06)", border: "1.5px solid rgba(22,163,74,0.25)" }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(22,163,74,0.12)" }}
+              >
+                <Check className="w-4 h-4" style={{ color: "#16a34a" }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold truncate" style={{ color: "#1c1917" }}>{stagedFile.name}</div>
+                <div className="text-xs" style={{ color: "#9e9b94" }}>{(stagedFile.size / (1024 * 1024)).toFixed(1)} MB · Ready to process</div>
+              </div>
+              <button
+                onClick={() => setStagedFile(null)}
+                className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
+                title="Remove file"
+              >
+                <X className="w-4 h-4" style={{ color: "#9e9b94" }} />
+              </button>
+            </div>
+          ) : (
+            <UploadZone
+              mode={mode}
+              disabled={uploading}
+              onSingleFile={setStagedFile}
+              onBatchFiles={(files) => setBatchFiles(files)}
+            />
+          )}
 
           {mode === "batch" && batchFiles.length > 0 && (
             <div className="mt-4">
@@ -238,11 +272,32 @@ export default function UploadPage() {
             </div>
             <div>
               <div className="text-sm font-bold" style={{ color: "#1c1917" }}>Subtitle Style</div>
-              <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>Customize how captions look on your clips</div>
+              <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>Pick a template, choose your font, then process</div>
             </div>
           </div>
           <SubtitleEditor onStyleChange={setSubtitleStyle} />
         </div>
+      )}
+
+      {/* Process Video button */}
+      {!jobId && (
+        <button
+          onClick={handleProcess}
+          disabled={!stagedFile || uploading}
+          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-base transition-all"
+          style={{
+            background: stagedFile && !uploading
+              ? "linear-gradient(135deg, #6d28d9, #7c3aed)"
+              : "#e4e1da",
+            color: stagedFile && !uploading ? "#ffffff" : "#9e9b94",
+            boxShadow: stagedFile && !uploading ? "0 4px 20px rgba(109,40,217,0.35)" : "none",
+            cursor: stagedFile && !uploading ? "pointer" : "not-allowed",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          <Play className="w-5 h-5" style={{ flexShrink: 0 }} />
+          {uploading ? "Uploading…" : stagedFile ? `Process Video` : "Select a video first"}
+        </button>
       )}
 
       {/* Re-clip section */}

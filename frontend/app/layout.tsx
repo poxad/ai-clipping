@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Poppins, Montserrat } from "next/font/google";
+import { Inter, Poppins, Montserrat, Roboto, Bebas_Neue, Anton } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { JobProvider } from "@/lib/JobContext";
@@ -25,6 +25,27 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-roboto",
+  display: "swap",
+});
+
+const bebasNeue = Bebas_Neue({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-bebas-neue",
+  display: "swap",
+});
+
+const anton = Anton({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-anton",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "AI Clipping — TikTok Auto-Clip",
   description: "Upload store videos. AI clips them into TikTok-ready shorts.",
@@ -32,7 +53,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable} ${montserrat.variable} h-full`}>
+    <html lang="en" className={`${inter.variable} ${poppins.variable} ${montserrat.variable} ${roboto.variable} ${bebasNeue.variable} ${anton.variable} h-full`}>
       <body style={{ background: "#f7f6f3", display: "flex", minHeight: "100vh" }}>
         <JobProvider>
           <Sidebar />
