@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins, Montserrat, Roboto, Bebas_Neue, Anton } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppShell } from "@/components/layout/AppShell";
 import { JobProvider } from "@/lib/JobContext";
 import { JobToast } from "@/components/progress/JobToast";
 
@@ -47,22 +47,16 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "AI Clipping — TikTok Auto-Clip",
-  description: "Upload store videos. AI clips them into TikTok-ready shorts.",
+  title: "Jumo — AI TikTok Clip Generator",
+  description: "Upload store videos. AI clips them into TikTok-ready shorts automatically.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable} ${montserrat.variable} ${roboto.variable} ${bebasNeue.variable} ${anton.variable} h-full`}>
-      <body style={{ background: "#f7f6f3", display: "flex", minHeight: "100vh" }}>
+      <body style={{ display: "flex", minHeight: "100vh" }}>
         <JobProvider>
-          <Sidebar />
-          <main
-            className="flex-1 flex justify-center"
-            style={{ marginLeft: "var(--sidebar-w)", minHeight: "100vh", background: "#f7f6f3" }}
-          >
-            {children}
-          </main>
+          <AppShell>{children}</AppShell>
           <JobToast />
         </JobProvider>
       </body>

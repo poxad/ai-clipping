@@ -1,358 +1,202 @@
-"use client";
+import Link from "next/link";
+import { ArrowRight, Scissors, Zap, Clock, TrendingUp } from "lucide-react";
 
-import { useState, useEffect } from "react";
-import { UploadZone } from "@/components/upload/UploadZone";
-import { BatchPreview } from "@/components/upload/BatchPreview";
-import { ReclipSection } from "@/components/upload/ReclipSection";
-import { SubtitleEditor } from "@/components/subtitle/SubtitleEditor";
-import { ProgressCard } from "@/components/progress/ProgressCard";
-import { ClipsGrid } from "@/components/clips/ClipsGrid";
-import { ScheduleModal } from "@/components/scheduler/ScheduleModal";
-import { useJob } from "@/lib/JobContext";
-import { useHistory } from "@/lib/useHistory";
-import { uploadSingle, uploadBatch } from "@/lib/api";
-import type { Clip, StylePayload } from "@/lib/types";
-import { Store, Mic, ChevronDown, ChevronUp, Wand2, Check, X, Play } from "lucide-react";
-
-type Mode = "single" | "batch";
-type ContentType = "retail" | "podcast";
-
-const VOCAB_KEY = "whisper_vocab";
-
-function SectionLabel({ step, title, desc }: { step: number; title: string; desc: string }) {
+export default function LandingPage() {
   return (
-    <div className="flex items-start gap-3 mb-4">
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-        style={{ background: "linear-gradient(135deg, #6d28d9, #7c3aed)", color: "white" }}
-      >
-        {step}
-      </div>
-      <div>
-        <div className="text-sm font-bold" style={{ color: "#1c1917" }}>{title}</div>
-        <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{desc}</div>
-      </div>
-    </div>
-  );
-}
+    <div style={{ background: "#09090b", minHeight: "100vh", color: "#ffffff", width: "100%" }}>
 
-export default function UploadPage() {
-  const [mode] = useState<Mode>("single");
-  const [contentType, setContentType] = useState<ContentType>("retail");
-  const [whisperVocab, setWhisperVocab] = useState<string>("kacamata moo\nwhatsapp");
-  const [stagedFile, setStagedFile] = useState<File | null>(null);
-  const [batchFiles, setBatchFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [subtitleStyle, setSubtitleStyle] = useState<StylePayload | null>(null);
-  const [showVocab, setShowVocab] = useState(false);
-  const [scheduleClip, setScheduleClip] = useState<Clip | null>(null);
-
-  const { history } = useHistory();
-  const { jobId, pollState, startJob, reset } = useJob();
-
-  useEffect(() => {
-    const saved = localStorage.getItem(VOCAB_KEY);
-    if (saved) setWhisperVocab(saved);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(VOCAB_KEY, whisperVocab);
-  }, [whisperVocab]);
-
-  function buildStyle(): StylePayload | null {
-    if (!subtitleStyle) return null;
-    return { ...subtitleStyle, content_type: contentType, whisper_prompt: whisperVocab || undefined };
-  }
-
-  async function startSingle(file: File) {
-    const style = buildStyle();
-    if (!style) return;
-    setError(null);
-    setUploading(true);
-    try {
-      const id = await uploadSingle(file, style);
-      startJob(id, style);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleProcess() {
-    if (!stagedFile) return;
-    await startSingle(stagedFile);
-  }
-
-  async function startBatch() {
-    const style = buildStyle();
-    if (!style || !batchFiles.length) return;
-    setError(null);
-    setUploading(true);
-    try {
-      const id = await uploadBatch(batchFiles, style);
-      startJob(id, style);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function handleReset() {
-    reset();
-    setStagedFile(null);
-    setBatchFiles([]);
-    setError(null);
-  }
-
-  const showProgress = (jobId && !["done", "error"].includes(pollState.status)) || uploading;
-  const showClips = pollState.status === "done" && pollState.clips.length > 0;
-
-  return (
-    <div className="flex flex-col gap-8 p-8 max-w-3xl w-full">
-
-      {/* Page header */}
-      {!jobId && (
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1c1917", letterSpacing: "-0.02em" }}>
-            Create TikTok Clips
-          </h1>
-          <p className="text-sm mt-1.5" style={{ color: "#9e9b94", lineHeight: 1.6 }}>
-            Upload a store recording — AI transcribes it, finds the best moments, and produces ready-to-post short clips.
-          </p>
-        </div>
-      )}
-
-      {/* Step 1 — Content type */}
-      {!jobId && (
-        <div
-          className="rounded-2xl p-5"
-          style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
-        >
-          <SectionLabel step={1} title="What type of video is this?" desc="Helps the AI pick better clip boundaries and captions" />
-          <div className="grid grid-cols-2 gap-3">
-            {([
-              { key: "retail",  icon: Store, label: "Employee Generated Contenta",  desc: "Customer service, product demos, try-ons" },
-              { key: "podcast", icon: Mic,   label: "Podcast / Talk",  desc: "Interviews, conversations, commentary" },
-            ] as const).map(({ key, icon: Icon, label, desc }) => (
-              <button
-                key={key}
-                onClick={() => setContentType(key)}
-                className="flex items-start gap-3 px-4 py-3.5 rounded-xl text-left transition-all"
-                style={{
-                  background: contentType === key ? "rgba(109,40,217,0.06)" : "#fafaf8",
-                  border: `2px solid ${contentType === key ? "#6d28d9" : "#e4e1da"}`,
-                  boxShadow: contentType === key ? "0 0 0 3px rgba(109,40,217,0.08)" : "none",
-                }}
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: contentType === key ? "rgba(109,40,217,0.12)" : "#f0ede8" }}
-                >
-                  <Icon className="w-4 h-4" style={{ color: contentType === key ? "#6d28d9" : "#9e9b94" }} />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold" style={{ color: contentType === key ? "#6d28d9" : "#1c1917" }}>
-                    {label}
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{desc}</div>
-                </div>
-              </button>
-            ))}
+      {/* Nav */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
+        background: "rgba(9,9,11,0.85)", backdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        padding: "0 32px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: 60,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: "linear-gradient(135deg, #6d28d9, #e11d48)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 2px 12px rgba(109,40,217,0.4)",
+          }}>
+            <Scissors size={15} color="#fff" />
           </div>
+          <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.03em" }}>Jumo</span>
         </div>
-      )}
 
-      {/* Step 2 — Upload */}
-      {!jobId && (
-        <div
-          className="rounded-2xl p-5"
-          style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
-        >
-          <SectionLabel step={2} title="Upload your video" desc="Drop a raw recording — unedited is totally fine" />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Link
+            href="/login"
+            style={{
+              padding: "8px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+              color: "rgba(255,255,255,0.6)", textDecoration: "none", transition: "color 0.15s",
+            }}
+          >
+            Log in
+          </Link>
+          <Link
+            href="/register"
+            style={{
+              padding: "8px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+              background: "linear-gradient(135deg, #6d28d9, #7c3aed)",
+              color: "#fff", textDecoration: "none",
+              boxShadow: "0 2px 12px rgba(109,40,217,0.35)",
+            }}
+          >
+            Get started
+          </Link>
+        </div>
+      </nav>
 
-          {stagedFile ? (
-            /* Staged file pill */
-            <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl"
-              style={{ background: "rgba(22,163,74,0.06)", border: "1.5px solid rgba(22,163,74,0.25)" }}
+      {/* Hero */}
+      <section style={{
+        paddingTop: 160, paddingBottom: 120,
+        textAlign: "center", maxWidth: 760, margin: "0 auto", padding: "160px 32px 120px",
+      }}>
+        {/* Badge */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 14px", borderRadius: 100,
+          background: "rgba(109,40,217,0.15)", border: "1px solid rgba(109,40,217,0.3)",
+          fontSize: 12, fontWeight: 600, color: "#a78bfa", marginBottom: 32,
+        }}>
+          <Zap size={12} />
+          AI-powered video clipping
+        </div>
+
+        <h1 style={{
+          fontSize: "clamp(40px, 6vw, 72px)",
+          fontWeight: 900,
+          lineHeight: 1.05,
+          letterSpacing: "-0.04em",
+          marginBottom: 24,
+          background: "linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.6) 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }}>
+          Upload once.<br />Go viral 80 times.
+        </h1>
+
+        <p style={{
+          fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.45)",
+          maxWidth: 540, margin: "0 auto 48px", fontWeight: 400,
+        }}>
+          Staff record customer service videos. Jumo transcribes, finds the best moments,
+          and delivers ready-to-post TikTok clips — automatically.
+        </p>
+
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link
+            href="/register"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "14px 28px", borderRadius: 14, fontSize: 15, fontWeight: 700,
+              background: "linear-gradient(135deg, #6d28d9, #7c3aed)",
+              color: "#fff", textDecoration: "none",
+              boxShadow: "0 4px 24px rgba(109,40,217,0.4)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Start for free <ArrowRight size={16} />
+          </Link>
+          <Link
+            href="/upload"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "14px 28px", borderRadius: 14, fontSize: 15, fontWeight: 600,
+              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(255,255,255,0.7)", textDecoration: "none",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Try the app
+          </Link>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section style={{
+        maxWidth: 1000, margin: "0 auto", padding: "0 32px 120px",
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16,
+      }}>
+        {[
+          {
+            icon: Zap,
+            title: "Auto-transcribe & clip",
+            desc: "Whisper AI transcribes your video in Indonesian. The engine finds natural scene breaks and cuts clips at the right moments.",
+          },
+          {
+            icon: Clock,
+            title: "15–30 second shorts",
+            desc: "Every clip is sized for TikTok. Jump cuts remove dead air. Burned-in subtitles with your brand style.",
+          },
+          {
+            icon: TrendingUp,
+            title: "Built for 80 accounts",
+            desc: "One upload produces clips ready to post across all your store accounts. Same content, zero extra work.",
+          },
+        ].map(({ icon: Icon, title, desc }) => (
+          <div
+            key={title}
+            style={{
+              padding: "28px 28px 32px",
+              borderRadius: 18,
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: "rgba(109,40,217,0.15)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 18,
+            }}>
+              <Icon size={18} color="#a78bfa" />
+            </div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, letterSpacing: "-0.02em" }}>{title}</h3>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,0.4)" }}>{desc}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* Footer */}
+      <footer style={{
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        padding: "32px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 16,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: 7,
+            background: "linear-gradient(135deg, #6d28d9, #e11d48)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Scissors size={11} color="#fff" />
+          </div>
+          <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-0.02em" }}>Jumo</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", marginLeft: 4 }}>
+            © {new Date().getFullYear()}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: 24 }}>
+          {[
+            { href: "/tos", label: "Terms of Service" },
+            { href: "/privacy", label: "Privacy Policy" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", textDecoration: "none" }}
             >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(22,163,74,0.12)" }}
-              >
-                <Check className="w-4 h-4" style={{ color: "#16a34a" }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate" style={{ color: "#1c1917" }}>{stagedFile.name}</div>
-                <div className="text-xs" style={{ color: "#9e9b94" }}>{(stagedFile.size / (1024 * 1024)).toFixed(1)} MB · Ready to process</div>
-              </div>
-              <button
-                onClick={() => setStagedFile(null)}
-                className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
-                title="Remove file"
-              >
-                <X className="w-4 h-4" style={{ color: "#9e9b94" }} />
-              </button>
-            </div>
-          ) : (
-            <UploadZone
-              mode={mode}
-              disabled={uploading}
-              onSingleFile={setStagedFile}
-              onBatchFiles={(files) => setBatchFiles(files)}
-            />
-          )}
-
-          {mode === "batch" && batchFiles.length > 0 && (
-            <div className="mt-4">
-              <BatchPreview
-                files={batchFiles}
-                onClear={() => setBatchFiles([])}
-                onUpload={startBatch}
-                uploading={uploading}
-              />
-            </div>
-          )}
-
-          {/* Brand words */}
-          <div className="mt-4">
-            <button
-              onClick={() => setShowVocab((v) => !v)}
-              className="flex items-center gap-2 text-xs font-semibold transition-colors w-full"
-              style={{ color: showVocab ? "#6d28d9" : "#9e9b94" }}
-            >
-              <Wand2 className="w-3.5 h-3.5" />
-              Brand name hints for better transcription
-              {showVocab
-                ? <ChevronUp className="w-3.5 h-3.5 ml-auto" />
-                : <ChevronDown className="w-3.5 h-3.5 ml-auto" />
-              }
-            </button>
-            {showVocab && (
-              <div className="mt-3">
-                <p className="text-xs mb-2" style={{ color: "#9e9b94" }}>
-                  Add brand names, product names, or local words the AI might misspell — one per line.
-                </p>
-                <textarea
-                  value={whisperVocab}
-                  onChange={(e) => setWhisperVocab(e.target.value)}
-                  rows={4}
-                  placeholder={"Kacamata Moo\nlensa kontak\nsilinder\ncek mata"}
-                  className="w-full rounded-xl px-3 py-2.5 text-xs resize-none"
-                  style={{
-                    background: "#fafaf8",
-                    border: "1px solid #e4e1da",
-                    color: "#1c1917",
-                    outline: "none",
-                    fontFamily: "monospace",
-                    lineHeight: 1.6,
-                  }}
-                />
-              </div>
-            )}
-          </div>
+              {label}
+            </Link>
+          ))}
         </div>
-      )}
-
-      {/* Step 3 — Subtitle style */}
-      {!jobId && (
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{ border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
-        >
-          <div className="flex items-start gap-3 px-5 pt-5 pb-4">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-              style={{ background: "linear-gradient(135deg, #6d28d9, #7c3aed)", color: "white" }}
-            >
-              3
-            </div>
-            <div>
-              <div className="text-sm font-bold" style={{ color: "#1c1917" }}>Subtitle Style</div>
-              <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>Pick a template, choose your font, then process</div>
-            </div>
-          </div>
-          <SubtitleEditor onStyleChange={setSubtitleStyle} />
-        </div>
-      )}
-
-      {/* Process Video button */}
-      {!jobId && (
-        <button
-          onClick={handleProcess}
-          disabled={!stagedFile || uploading}
-          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-base transition-all"
-          style={{
-            background: stagedFile && !uploading
-              ? "linear-gradient(135deg, #6d28d9, #7c3aed)"
-              : "#e4e1da",
-            color: stagedFile && !uploading ? "#ffffff" : "#9e9b94",
-            boxShadow: stagedFile && !uploading ? "0 4px 20px rgba(109,40,217,0.35)" : "none",
-            cursor: stagedFile && !uploading ? "pointer" : "not-allowed",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          <Play className="w-5 h-5" style={{ flexShrink: 0 }} />
-          {uploading ? "Uploading…" : stagedFile ? `Process Video` : "Select a video first"}
-        </button>
-      )}
-
-      {/* Re-clip section */}
-      {!jobId && (
-        <ReclipSection
-          history={history}
-          currentStyle={buildStyle()}
-          onJobStart={(id) => startJob(id, buildStyle())}
-        />
-      )}
-
-      {/* Error */}
-      {error && (
-        <div
-          className="flex items-start gap-3 px-4 py-3.5 rounded-xl text-sm"
-          style={{ background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.18)", color: "#dc2626" }}
-        >
-          <span className="text-base flex-shrink-0">⚠️</span>
-          <div>
-            <div className="font-semibold">Upload failed</div>
-            <div className="text-xs mt-0.5 opacity-80">{error}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Progress */}
-      {showProgress && (
-        <ProgressCard
-          status={uploading ? "uploading" : pollState.status}
-          progress={uploading ? 2 : pollState.progress}
-          message={uploading ? "Uploading your video…" : pollState.message}
-          logs={pollState.logs}
-        />
-      )}
-
-      {/* Clips */}
-      {showClips && jobId && (
-        <ClipsGrid
-          clips={pollState.clips}
-          jobId={jobId}
-          onReset={handleReset}
-          onSchedule={setScheduleClip}
-          style={subtitleStyle}
-        />
-      )}
-
-      {/* Schedule modal */}
-      {scheduleClip && jobId && (
-        <ScheduleModal
-          clip={scheduleClip}
-          jobId={jobId}
-          onClose={() => setScheduleClip(null)}
-          onScheduled={() => setScheduleClip(null)}
-        />
-      )}
+      </footer>
     </div>
   );
 }

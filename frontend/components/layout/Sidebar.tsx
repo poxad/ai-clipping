@@ -6,7 +6,7 @@ import { Scissors, Upload, History, Settings, Calendar, BookOpen } from "lucide-
 import { useHistory } from "@/lib/useHistory";
 
 const nav = [
-  { href: "/", label: "Upload & Clip", desc: "Create new clips", icon: Upload },
+  { href: "/upload", label: "Upload & Clip", desc: "Create new clips", icon: Upload },
   { href: "/history", label: "History", desc: "Past jobs", icon: History, badge: true },
   { href: "/scheduler", label: "Scheduler", desc: "TikTok posting", icon: Calendar },
   { href: "/guide", label: "Scoring Guide", desc: "How AI grades clips", icon: BookOpen },
@@ -33,7 +33,7 @@ export function Sidebar() {
           </div>
           <div>
             <div className="font-bold text-sm" style={{ color: "#1c1917", letterSpacing: "-0.01em" }}>
-              AI Clipping
+              Jumo
             </div>
             <div className="text-xs" style={{ color: "#9e9b94" }}>
               Auto TikTok clips
