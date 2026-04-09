@@ -13,9 +13,13 @@ import re
 import subprocess
 from typing import Optional, Tuple
 
-import cv2
-import mediapipe as mp
-import numpy as np
+try:
+    import cv2
+    import mediapipe as mp
+    import numpy as np
+    _CV2_AVAILABLE = True
+except ImportError:
+    _CV2_AVAILABLE = False
 
 from . import config
 
@@ -67,6 +71,9 @@ def _detect_face_center_x(video_path: str, width: int, height: int) -> float:
 
     Falls back to 0.5 (center crop) if no faces are found or mediapipe unavailable.
     """
+    if not _CV2_AVAILABLE:
+        return 0.5  # cv2/mediapipe not available — fall back to center crop
+
     if not hasattr(mp, "solutions"):
         return 0.5  # mediapipe >= 0.10.14 removed solutions API
 
