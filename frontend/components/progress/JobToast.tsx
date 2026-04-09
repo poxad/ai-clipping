@@ -26,7 +26,7 @@ export function JobToast() {
         minWidth: 260,
         maxWidth: 320,
       }}
-      onClick={() => router.push("/")}
+      onClick={() => router.push(isDone || isError ? `/history/${jobId}` : "/upload")}
     >
       <div className="flex items-center gap-2.5">
         {isActive && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "#6d28d9" }} />}

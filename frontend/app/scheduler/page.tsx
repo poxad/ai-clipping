@@ -691,12 +691,12 @@ function SchedulerPageInner() {
   const oauthError = searchParams.get("error");
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-5xl w-full">
+    <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: "#1c1917" }}>Scheduler</h1>
         <p className="text-sm mt-1" style={{ color: "#9e9b94" }}>
           Connect TikTok accounts and schedule clips for auto-posting
-        </p>
+        </p>  
       </div>
 
       {connected && (
