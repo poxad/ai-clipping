@@ -8,7 +8,7 @@ export default function HistoryPage() {
   const { history } = useHistory();
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-3xl w-full">
+    <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

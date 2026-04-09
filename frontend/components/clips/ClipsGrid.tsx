@@ -1,24 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Sparkles, Star, RotateCcw } from "lucide-react";
+import { Download, Star, RotateCcw } from "lucide-react";
 import { ClipCard } from "./ClipCard";
 import { SubtitleEditModal } from "./SubtitleEditModal";
-import { downloadAllUrl, rerenderSubtitles, clipName } from "@/lib/api";
-import type { Clip, StylePayload } from "@/lib/types";
+import { downloadAllUrl, clipName } from "@/lib/api";
+import type { Clip } from "@/lib/types";
 
 interface Props {
   clips: Clip[];
   jobId: string;
   onReset: () => void;
   onSchedule?: (clip: Clip) => void;
-  style?: StylePayload | null;
 }
 
-export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
+export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
   const [sortByScore, setSortByScore] = useState(true);
-  const [restyleState, setRestyleState] = useState<"idle" | "loading" | "done">("idle");
-  const [restyleError, setRestyleError] = useState<string | null>(null);
   const [cacheBuster, setCacheBuster] = useState("");
   const [editClip, setEditClip] = useState<Clip | null>(null);
 
@@ -27,20 +24,6 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
   const displayed = sortByScore
     ? [...clips].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
     : clips;
-
-  async function handleRestyle() {
-    if (!style) return;
-    setRestyleState("loading");
-    setRestyleError(null);
-    try {
-      await Promise.all(clips.map((clip) => rerenderSubtitles(jobId, clipName(clip), style)));
-      setCacheBuster(`?v=${Date.now()}`);
-      setRestyleState("done");
-    } catch (e: unknown) {
-      setRestyleError(e instanceof Error ? e.message : String(e));
-      setRestyleState("idle");
-    }
-  }
 
   return (
     <div>
@@ -62,7 +45,7 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
             </span>
           </div>
           <p className="text-xs mt-1" style={{ color: "#9e9b94" }}>
-            Hover to preview · Click to fullscreen · Download individually or all at once
+            Hover to preview · Click to fullscreen · Click the pencil to edit subtitles
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
@@ -78,21 +61,6 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
             >
               <Star className="w-3.5 h-3.5" />
               {sortByScore ? "Sorted by Score" : "Sort by Score"}
-            </button>
-          )}
-          {style && (
-            <button
-              onClick={handleRestyle}
-              disabled={restyleState === "loading"}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-60"
-              style={{
-                background: restyleState === "done" ? "rgba(22,163,74,0.08)" : "#f7f6f3",
-                border: `1px solid ${restyleState === "done" ? "rgba(22,163,74,0.3)" : "#e4e1da"}`,
-                color: restyleState === "done" ? "#16a34a" : "#706d67",
-              }}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {restyleState === "loading" ? "Applying…" : restyleState === "done" ? "Applied!" : "Re-apply Subtitles"}
             </button>
           )}
           <button
@@ -112,15 +80,6 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
         </div>
       </div>
 
-      {restyleError && (
-        <div
-          className="mb-4 px-4 py-3 rounded-xl text-xs font-medium"
-          style={{ background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.18)", color: "#dc2626" }}
-        >
-          ⚠ {restyleError}
-        </div>
-      )}
-
       {/* Grid */}
       <div
         className="grid gap-4"
@@ -132,7 +91,7 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
             clip={clip}
             jobId={jobId}
             onSchedule={onSchedule}
-            onEdit={style ? setEditClip : undefined}
+            onEdit={setEditClip}
             urlSuffix={cacheBuster}
           />
         ))}
@@ -142,9 +101,11 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule, style }: Props) {
         <SubtitleEditModal
           clip={editClip}
           jobId={jobId}
-          style={style}
           onClose={() => setEditClip(null)}
-          onSaved={() => setCacheBuster(`?v=${Date.now()}`)}
+          onSaved={() => {
+            setCacheBuster(`?v=${Date.now()}`);
+            setEditClip(null);
+          }}
         />
       )}
     </div>

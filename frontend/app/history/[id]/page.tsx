@@ -5,9 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ClipsGrid } from "@/components/clips/ClipsGrid";
-import { SubtitleEditor } from "@/components/subtitle/SubtitleEditor";
 import { ScheduleModal } from "@/components/scheduler/ScheduleModal";
-import type { Clip, HistoryEntry, StylePayload } from "@/lib/types";
+import type { Clip, HistoryEntry } from "@/lib/types";
 
 const KEY = "ai_clip_history";
 
@@ -15,7 +14,6 @@ export default function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [entry, setEntry] = useState<HistoryEntry | null>(null);
-  const [style, setStyle] = useState<StylePayload | null>(null);
   const [scheduleClip, setScheduleClip] = useState<Clip | null>(null);
 
   useEffect(() => {
@@ -52,7 +50,7 @@ export default function HistoryDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-5xl w-full">
+    <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -81,14 +79,10 @@ export default function HistoryDetailPage() {
         </div>
       </div>
 
-      {/* Subtitle Template */}
-      <SubtitleEditor onStyleChange={setStyle} />
-
       {/* Clips */}
       <ClipsGrid
         clips={entry.clips}
         jobId={entry.jobId}
-        style={style}
         onSchedule={setScheduleClip}
         onReset={() => router.push("/history")}
       />

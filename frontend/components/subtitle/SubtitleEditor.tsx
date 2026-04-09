@@ -196,26 +196,30 @@ function Preview({ style }: { style: SubtitleStyle }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Mini template card (scaled phone frame)
-// ---------------------------------------------------------------------------
-
-const MINI_W = 78;
-const MINI_H = Math.round(MINI_W * (FRAME_H / 243)); // maintain aspect
-const MINI_SCALE = MINI_W / 243;
-
 function MiniTemplateCard({
   template,
   isSelected,
   onClick,
-  previewText,
 }: {
   template: typeof TEMPLATES[0];
   isSelected: boolean;
   onClick: () => void;
-  previewText: string;
 }) {
-  const mergedStyle: SubtitleStyle = { ...DEFAULT, ...template.s, previewText };
+  const mergedStyle: SubtitleStyle = { ...DEFAULT, ...template.s, previewText: "Aa" };
+  const shadowPx = mergedStyle.hasShadow ? mergedStyle.shadowSize : 0;
+  const textShadow = mergedStyle.hasShadow ? `${shadowPx}px ${shadowPx}px 0px ${mergedStyle.shadowColor}` : "none";
+  let outline = "none";
+  if (mergedStyle.hasOutline) {
+    const n = Math.max(1, Math.floor(mergedStyle.outlineWidth / 1.5));
+    const c = mergedStyle.outlineColor;
+    const offsets: string[] = [];
+    for (let x = -n; x <= n; x++)
+      for (let y = -n; y <= n; y++)
+        if (x !== 0 || y !== 0) offsets.push(`${x}px ${y}px 0 ${c}`);
+    outline = offsets.join(", ");
+  }
+  const finalShadow = [textShadow !== "none" ? textShadow : null, outline !== "none" ? outline : null]
+    .filter(Boolean).join(", ") || "none";
 
   return (
     <button
@@ -233,10 +237,14 @@ function MiniTemplateCard({
       }}
     >
       <div style={{
-        width: MINI_W,
-        height: MINI_H,
+        width: 78,
+        height: 56,
         overflow: "hidden",
-        borderRadius: 6,
+        borderRadius: 8,
+        background: "#1c1917",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         border: `2px solid ${isSelected ? "#6d28d9" : "rgba(255,255,255,0.1)"}`,
         boxShadow: isSelected
           ? "0 0 0 3px rgba(109,40,217,0.35)"
@@ -244,22 +252,37 @@ function MiniTemplateCard({
         position: "relative",
         transition: "all 0.15s ease",
       }}>
-        <div style={{
-          transform: `scale(${MINI_SCALE})`,
-          transformOrigin: "top left",
-          width: 243,
-          height: FRAME_H,
-          pointerEvents: "none",
+        {mergedStyle.hasBg && (
+          <div style={{
+            position: "absolute",
+            inset: "8px 12px",
+            background: mergedStyle.bgColor,
+            opacity: mergedStyle.bgOpacity / 100,
+            borderRadius: 3,
+            zIndex: 0,
+          }} />
+        )}
+        <span style={{
+          position: "relative",
+          zIndex: 1,
+          fontFamily: FONT_CSS[mergedStyle.font] || `"${mergedStyle.font}", sans-serif`,
+          fontWeight: mergedStyle.bold ? 800 : 400,
+          fontSize: 24,
+          color: mergedStyle.textColor,
+          fontStyle: mergedStyle.italic ? "italic" : "normal",
+          letterSpacing: mergedStyle.letterSpacing * 0.25,
+          textShadow: finalShadow,
+          lineHeight: 1,
         }}>
-          <Preview style={mergedStyle} />
-        </div>
+          Aa
+        </span>
       </div>
       <span style={{
         fontSize: 10,
         fontWeight: isSelected ? 700 : 500,
         color: isSelected ? "#a78bfa" : "rgba(255,255,255,0.45)",
         textAlign: "center",
-        maxWidth: MINI_W + 4,
+        maxWidth: 78 + 4,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
@@ -423,7 +446,6 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
                 template={t}
                 isSelected={selectedTemplate === i}
                 onClick={() => applyTemplate(i)}
-                previewText={s.previewText}
               />
             ))}
           </div>

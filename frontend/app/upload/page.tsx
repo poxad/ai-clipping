@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { UploadZone } from "@/components/upload/UploadZone";
 import { BatchPreview } from "@/components/upload/BatchPreview";
 import { ReclipSection } from "@/components/upload/ReclipSection";
@@ -42,6 +43,7 @@ export default function UploadPage() {
   const [whisperVocab, setWhisperVocab] = useState<string>("kacamata moo\nwhatsapp");
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
+  const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subtitleStyle, setSubtitleStyle] = useState<StylePayload | null>(null);
@@ -59,6 +61,12 @@ export default function UploadPage() {
   useEffect(() => {
     localStorage.setItem(VOCAB_KEY, whisperVocab);
   }, [whisperVocab]);
+
+  useEffect(() => {
+    if (pollState.status === "done" && jobId) {
+      router.push(`/history/${jobId}`);
+    }
+  }, [pollState.status, jobId, router]);
 
   function buildStyle(): StylePayload | null {
     if (!subtitleStyle) return null;
@@ -111,7 +119,7 @@ export default function UploadPage() {
   const showClips = pollState.status === "done" && pollState.clips.length > 0;
 
   return (
-    <div className="flex flex-col gap-8 p-8 max-w-3xl w-full">
+    <div className="flex flex-col gap-8 p-8 max-w-9xl w-full">
 
       {/* Page header */}
       {!jobId && (
@@ -340,7 +348,6 @@ export default function UploadPage() {
           jobId={jobId}
           onReset={handleReset}
           onSchedule={setScheduleClip}
-          style={subtitleStyle}
         />
       )}
 
