@@ -61,11 +61,13 @@ MAX_CLIP_DURATION: float = 45.0
 MIN_VIABLE_SPEECH: float = 5.0
 
 # Silence padding kept around each speech segment for jump cuts
-JUMP_CUT_PADDING: float = 0.2
+JUMP_CUT_PADDING: float = 0.3
 
 # Silence gap between words that triggers a jump cut within a clip.
 # Any pause longer than this between consecutive words will be cut out.
-WORD_GAP_THRESHOLD: float = 0.6
+# 0.6s was too aggressive — cutting natural speech pauses made clips feel choppy.
+# 1.2s only removes clearly dead air while preserving natural rhythm.
+WORD_GAP_THRESHOLD: float = 1.2
 
 # Whisper language code (Indonesian)
 WHISPER_LANGUAGE: str = "id"
