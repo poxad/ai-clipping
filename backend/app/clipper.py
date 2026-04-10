@@ -288,7 +288,8 @@ def create_clip_video(
                 _ffmpeg_trim(input_video, merged[0][0], merged[0][1], tmp_path, crop_filter)
             else:
                 _ffmpeg_concat(input_video, merged, tmp_path, crop_filter)
-        except RuntimeError:
+        except RuntimeError as e:
+            print(f"[CLIPPER] FFmpeg render failed for {os.path.basename(output_path)}: {e}")
             return False
 
         if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
@@ -695,11 +696,15 @@ def create_multisource_clip_video(
 
     tmp_path = output_path.replace(".mp4", "_raw.mp4")
     try:
-        if len(merged) == 1:
-            idx, path, start, end, crop = merged[0]
-            _ffmpeg_trim(path, start, end, tmp_path, crop)
-        else:
-            _ffmpeg_multisource_concat(merged, tmp_path)
+        try:
+            if len(merged) == 1:
+                idx, path, start, end, crop = merged[0]
+                _ffmpeg_trim(path, start, end, tmp_path, crop)
+            else:
+                _ffmpeg_multisource_concat(merged, tmp_path)
+        except RuntimeError as e:
+            print(f"[CLIPPER] FFmpeg multisource render failed for {os.path.basename(output_path)}: {e}")
+            return False
             
         if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
             return False
