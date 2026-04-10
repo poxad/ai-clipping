@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -509,8 +509,23 @@ async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Opti
 # API routes
 # ---------------------------------------------------------------------------
 
+def _extract_user_id(request: Request) -> Optional[str]:
+    """Extract Supabase user_id from the Bearer token, best-effort."""
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[len("Bearer "):]
+    try:
+        from .supabase_client import get_client
+        result = get_client().auth.get_user(token)
+        return result.user.id if result.user else None
+    except Exception:
+        return None
+
+
 @app.post("/api/upload")
 async def upload_video(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     style: str = Form(None),
@@ -522,9 +537,11 @@ async def upload_video(
             f"Unsupported file type '{ext}'. Accepted: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
+    user_id = _extract_user_id(request)
     job_id = str(uuid.uuid4())
     create_job(job_id, status="uploading", progress=2,
-               message="Saving uploaded video...", logs=["Saving uploaded video..."])
+               message="Saving uploaded video...", logs=["Saving uploaded video..."],
+               user_id=user_id)
 
     # Save upload
     upload_path = os.path.join(config.UPLOAD_DIR, f"{job_id}{ext}")
@@ -539,6 +556,7 @@ async def upload_video(
 
 @app.post("/api/upload-batch")
 async def upload_batch(
+    request: Request,
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
     style: str = Form(None),
@@ -557,9 +575,10 @@ async def upload_batch(
                 f"Accepted: {', '.join(ALLOWED_EXTENSIONS)}",
             )
 
+    user_id = _extract_user_id(request)
     job_id = str(uuid.uuid4())
     msg = f"Saving {len(files)} video(s)..."
-    create_job(job_id, status="uploading", progress=2, message=msg, logs=[msg])
+    create_job(job_id, status="uploading", progress=2, message=msg, logs=[msg], user_id=user_id)
 
     saved_paths = []
     for i, f in enumerate(files):

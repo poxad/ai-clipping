@@ -32,27 +32,41 @@ def init_db():
                 message  TEXT NOT NULL DEFAULT '',
                 logs     TEXT NOT NULL DEFAULT '[]',
                 clips    TEXT NOT NULL DEFAULT '[]',
+                user_id  TEXT,
+                filename TEXT,
                 updated  INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
             )
         """)
+        # Migrate: add user_id and filename if they don't exist yet
+        for col in ("user_id TEXT", "filename TEXT"):
+            try:
+                conn.execute(f"ALTER TABLE jobs ADD COLUMN {col}")
+            except Exception:
+                pass
         conn.commit()
 
 
 # ── Supabase helpers (best-effort, fire-and-forget background thread) ────────
 
+def _sb_run(fn):
+    """Run a Supabase operation in a background thread. Never blocks callers."""
+    t = threading.Thread(target=fn, daemon=False)
+    t.start()
+
+
 def _sb_upsert(job_id: str, data: dict):
-    """Write job data to Supabase Postgres in a daemon thread. Never blocks callers."""
+    """Upsert a row into Supabase jobs table. Creates the row if missing, updates if present."""
     def _run():
         try:
             from .supabase_client import get_client
-            sb = get_client()
-            sb.table("jobs").upsert({"job_id": job_id, **data}, on_conflict="job_id").execute()
+            get_client().table("jobs").upsert(
+                {"job_id": job_id, **data},
+                on_conflict="job_id",
+            ).execute()
+            print(f"[SUPABASE] upserted job {job_id} status={data.get('status', '?')}")
         except Exception as e:
             print(f"[SUPABASE] upsert failed (non-fatal): {e}")
-
-    import threading
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
+    _sb_run(_run)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -64,16 +78,18 @@ def create_job(job_id: str, status: str = "pending", progress: int = 0,
     logs = logs or []
     clips = clips or []
 
-    # SQLite
+    # SQLite — store user_id and filename so update_job can include them in upserts
     with _lock, _conn() as conn:
         conn.execute(
-            "INSERT OR REPLACE INTO jobs (job_id, status, progress, message, logs, clips) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (job_id, status, progress, message, json.dumps(logs), json.dumps(clips))
+            "INSERT OR REPLACE INTO jobs "
+            "(job_id, status, progress, message, logs, clips, user_id, filename) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (job_id, status, progress, message, json.dumps(logs), json.dumps(clips),
+             user_id, filename)
         )
         conn.commit()
 
-    # Supabase (best-effort)
+    # Supabase — upsert (handles duplicate job_id if job is retried)
     sb_data: dict = {
         "status": status, "progress": progress,
         "message": message, "clips": clips, "logs": logs,
@@ -100,6 +116,12 @@ def update_job(job_id: str, **kwargs):
         message  = kwargs.get("message",  row["message"])
         clips    = kwargs.get("clips",    json.loads(row["clips"]))
 
+        # Preserve user_id from SQLite so every Supabase upsert keeps it
+        try:
+            user_id = row["user_id"]
+        except (IndexError, KeyError):
+            user_id = None
+
         existing_logs: list = json.loads(row["logs"])
         if "message" in kwargs and kwargs["message"]:
             if not existing_logs or existing_logs[-1] != kwargs["message"]:
@@ -112,11 +134,14 @@ def update_job(job_id: str, **kwargs):
         )
         conn.commit()
 
-    # Mirror to Supabase
-    _sb_upsert(job_id, {
+    # Supabase — upsert so the row is created even if create_job's upsert failed
+    sb_data: dict = {
         "status": status, "progress": progress,
         "message": message, "clips": clips, "logs": existing_logs,
-    })
+    }
+    if user_id:
+        sb_data["user_id"] = user_id
+    _sb_upsert(job_id, sb_data)
 
 
 def get_job(job_id: str) -> Optional[dict]:
