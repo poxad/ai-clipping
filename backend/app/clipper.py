@@ -336,7 +336,8 @@ def _merge_segments(segments: List[Tuple[float, float]]) -> List[Tuple[float, fl
     return [tuple(s) for s in merged]
 
 
-_FFMPEG_ENCODE = ["-c:v", "libx264", "-c:a", "aac", "-preset", "fast", "-crf", "23"]
+_FFMPEG_ENCODE = ["-c:v", "libx264", "-c:a", "aac", "-preset", "ultrafast", "-crf", "26"]
+_FFMPEG_TIMEOUT = 300  # 5 min hard cap per FFmpeg call
 
 
 # ---------------------------------------------------------------------------
@@ -513,18 +514,28 @@ def _burn_ass(input_path: str, ass_path: str, output_path: str) -> bool:
         config.FFMPEG_BIN, "-y",
         "-i", input_path,
         "-vf", f"ass={escaped}",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26",
         "-c:a", "copy",
         output_path,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.returncode == 0
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=_FFMPEG_TIMEOUT,
+        )
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        print(f"[FFMPEG] burn_ass timed out after {_FFMPEG_TIMEOUT}s — skipping subtitles")
+        return False
 
 
 def _ffmpeg_trim(
     input_video: str, start: float, end: float, output_path: str,
     crop_filter: Optional[str] = None,
 ):
+    print(f"[FFMPEG] trim {start:.1f}s–{end:.1f}s → {os.path.basename(output_path)}")
     vf = crop_filter or None
     cmd = [
         config.FFMPEG_BIN, "-y",
@@ -543,6 +554,7 @@ def _ffmpeg_concat(
     crop_filter: Optional[str] = None,
 ):
     """Build filter_complex to concat multiple video+audio segments."""
+    print(f"[FFMPEG] concat {len(segments)} segments → {os.path.basename(output_path)}")
     filter_parts = []
     crop_chain = f",{crop_filter}" if crop_filter else ""
 
@@ -571,9 +583,17 @@ def _ffmpeg_concat(
 
 
 def _run_ffmpeg(cmd: List[str]):
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=_FFMPEG_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"FFmpeg timed out after {_FFMPEG_TIMEOUT}s")
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error:\n{result.stderr[-2000:]}")
+        raise RuntimeError(f"FFmpeg exited with code {result.returncode}")
 
 
 # ---------------------------------------------------------------------------
