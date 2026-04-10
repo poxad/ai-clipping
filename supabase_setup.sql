@@ -85,7 +85,79 @@ CREATE POLICY "Users update own settings"
     ON public.user_settings FOR UPDATE
     USING (user_id = auth.uid());
 
--- ── 4. Storage buckets ───────────────────────────────────────
+-- ── 4. Per-clip subtitle persistence ─────────────────────────
+CREATE TABLE IF NOT EXISTS public.job_clips (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id            TEXT NOT NULL REFERENCES public.jobs(job_id) ON DELETE CASCADE,
+    clip_name         TEXT NOT NULL,
+    clip_index        INTEGER NOT NULL DEFAULT 1,
+    video_url         TEXT,
+    raw_artifact_name TEXT,
+    words_artifact_name TEXT,
+    transcript        TEXT NOT NULL DEFAULT '',
+    subtitle_words    JSONB NOT NULL DEFAULT '[]'::jsonb,
+    subtitle_style    JSONB NOT NULL DEFAULT '{}'::jsonb,
+    source            TEXT,
+    clip_start        NUMERIC,
+    clip_end          NUMERIC,
+    duration          NUMERIC,
+    score             NUMERIC,
+    score_summary     TEXT,
+    caption           TEXT,
+    clip_type         TEXT,
+    score_metrics     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT job_clips_job_id_clip_name_key UNIQUE (job_id, clip_name)
+);
+
+DROP TRIGGER IF EXISTS job_clips_updated_at ON public.job_clips;
+CREATE TRIGGER job_clips_updated_at
+    BEFORE UPDATE ON public.job_clips
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+ALTER TABLE public.job_clips ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users see own job clips" ON public.job_clips;
+CREATE POLICY "Users see own job clips"
+    ON public.job_clips FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.jobs j
+            WHERE j.job_id = job_clips.job_id
+              AND j.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Users insert own job clips" ON public.job_clips;
+CREATE POLICY "Users insert own job clips"
+    ON public.job_clips FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM public.jobs j
+            WHERE j.job_id = job_clips.job_id
+              AND j.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Users update own job clips" ON public.job_clips;
+CREATE POLICY "Users update own job clips"
+    ON public.job_clips FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.jobs j
+            WHERE j.job_id = job_clips.job_id
+              AND j.user_id = auth.uid()
+        )
+    );
+
+CREATE INDEX IF NOT EXISTS job_clips_job_id_idx ON public.job_clips (job_id);
+CREATE INDEX IF NOT EXISTS job_clips_created_at_idx ON public.job_clips (created_at DESC);
+
+-- ── 5. Storage buckets ───────────────────────────────────────
 -- Run these one at a time if the bucket already exists
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -115,7 +187,7 @@ CREATE POLICY "Public clips readable"
 -- Only service role can insert/delete in clips (backend does this)
 -- Service role bypasses RLS automatically.
 
--- ── 5. Indexes ───────────────────────────────────────────────
+-- ── 6. Indexes ───────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS jobs_user_id_idx ON public.jobs (user_id);
 CREATE INDEX IF NOT EXISTS jobs_job_id_idx  ON public.jobs (job_id);
 CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON public.jobs (created_at DESC);

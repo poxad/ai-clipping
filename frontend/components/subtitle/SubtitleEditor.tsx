@@ -3,7 +3,6 @@
 import { useEffect, useReducer, useState } from "react";
 import { styleToPayload } from "@/lib/api";
 import type { StylePayload } from "@/lib/types";
-import { useUserSettings } from "@/lib/useUserSettings";
 import { Slider } from "@/components/ui/slider";
 import {
   Type, Palette, Layers, AlignCenter, AlignLeft, AlignRight,
@@ -391,32 +390,15 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
   const [s, dispatch] = useReducer(reducer, DEFAULT);
   const [tab, setTab] = useState<TabKey>("font");
   const [selectedTemplate, setSelectedTemplate] = useState<number>(0);
-  const [savedNotice, setSavedNotice] = useState(false);
-  const { subtitleStyle, saveSubtitleStyle, saving } = useUserSettings();
 
   function set<K extends keyof SubtitleStyle>(key: K, value: SubtitleStyle[K]) {
     dispatch({ key, value } as Action);
   }
 
-  // Load saved settings from Supabase once available
-  useEffect(() => {
-    if (!subtitleStyle) return;
-    Object.entries(subtitleStyle).forEach(([k, v]) => {
-      if (k in DEFAULT) set(k as keyof SubtitleStyle, v as never);
-    });
-  }, [subtitleStyle]);
-
   function applyTemplate(idx: number) {
     setSelectedTemplate(idx);
     const t = TEMPLATES[idx];
     Object.entries(t.s).forEach(([k, v]) => set(k as keyof SubtitleStyle, v as never));
-  }
-
-  async function handleSaveDefault() {
-    const { previewText: _pt, ...styleToSave } = s;
-    await saveSubtitleStyle(styleToSave);
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 2000);
   }
 
   useEffect(() => {
@@ -687,32 +669,6 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
 
         <p style={{ fontSize: 10, color: "#c4c1bb", textAlign: "center", lineHeight: 1.5 }}>
           Live preview. Select a template above or customize per tab.
-        </p>
-
-        <button
-          onClick={() => void handleSaveDefault()}
-          disabled={saving}
-          className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-all"
-          style={{
-            background: saving
-              ? "#e4e1da"
-              : savedNotice
-                ? "rgba(22,163,74,0.1)"
-                : "linear-gradient(135deg, #6d28d9, #7c3aed)",
-            color: saving
-              ? "#9e9b94"
-              : savedNotice
-                ? "#16a34a"
-                : "#ffffff",
-            boxShadow: saving || savedNotice ? "none" : "0 4px 16px rgba(109,40,217,0.2)",
-            cursor: saving ? "not-allowed" : "pointer",
-          }}
-        >
-          {saving ? "Saving..." : savedNotice ? "Saved to Supabase" : "Save Subtitle Settings"}
-        </button>
-
-        <p style={{ fontSize: 10, color: "#c4c1bb", textAlign: "center", lineHeight: 1.5 }}>
-          Saves this subtitle style as your default for future uploads.
         </p>
       </div>
     </div>

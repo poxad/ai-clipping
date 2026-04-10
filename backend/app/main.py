@@ -26,7 +26,14 @@ from .reframer import get_portrait_crop_filter
 from .transcriber import WordSegment, extract_audio, transcribe
 from .scheduler import router as scheduler_router, scheduler_loop
 from .jobstore import init_db, create_job, update_job as _store_update, get_job
-from .storage import upload_clip
+from .clipstore import upsert_clip, get_subtitle_words, save_subtitle_state
+from .storage import (
+    upload_clip,
+    upload_raw,
+    upload_private_artifact,
+    download_private_artifact,
+    download_public_clip,
+)
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -68,6 +75,50 @@ def _job_dir(job_id: str) -> str:
     return os.path.join(config.OUTPUT_DIR, job_id)
 
 
+def _restore_clip_artifacts(job_id: str, clip_name: str) -> tuple[bool, bool]:
+    jdir = _job_dir(job_id)
+    raw_name = clip_name.replace(".mp4", "_raw.mp4")
+    words_name = clip_name.replace(".mp4", "_words.json")
+    raw_path = os.path.join(jdir, raw_name)
+    words_path = os.path.join(jdir, words_name)
+
+    raw_ok = os.path.exists(raw_path) or download_private_artifact(job_id, raw_name, raw_path)
+    words_ok = os.path.exists(words_path) or download_private_artifact(job_id, words_name, words_path)
+    return raw_ok, words_ok
+
+
+def _clip_paths(job_id: str, clip_name: str) -> tuple[str, str, str, str]:
+    jdir = _job_dir(job_id)
+    raw_name = clip_name.replace(".mp4", "_raw.mp4")
+    words_name = clip_name.replace(".mp4", "_words.json")
+    return (
+        os.path.join(jdir, raw_name),
+        os.path.join(jdir, clip_name),
+        os.path.join(jdir, words_name),
+        jdir,
+    )
+
+
+def _load_words_json(words_path: str) -> list:
+    with open(words_path, "r") as f:
+        return json.load(f)
+
+
+def _write_words_json(words_path: str, words: list) -> None:
+    os.makedirs(os.path.dirname(words_path), exist_ok=True)
+    with open(words_path, "w") as f:
+        json.dump(words, f)
+
+
+def _restore_words_from_db(job_id: str, clip_name: str, words_path: str) -> bool:
+    words = get_subtitle_words(job_id, clip_name)
+    if not words:
+        return False
+    _write_words_json(words_path, words)
+    print(f"[SUPABASE] Restored subtitle words from DB: {job_id}/{clip_name}")
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Background processing pipeline
 # ---------------------------------------------------------------------------
@@ -107,6 +158,7 @@ async def _process_single_video(
         trans_path = os.path.join(jdir, "transcription.json")
         with open(trans_path, "w") as tf:
             json.dump([dataclasses.asdict(w) for w in words], tf)
+        await asyncio.to_thread(upload_private_artifact, job_id, "transcription.json", trans_path, "application/json")
 
         _update_job(job_id, progress=progress_base + int(span * 0.40),
                     message=f"Transcribed {len(words)} words. Analyzing scenes...")
@@ -215,6 +267,7 @@ async def _process_single_video(
                     total_speech = sum(u.duration for u in sel_utts)
                     print(f"  [HARNESS] Final: {len(sel_utts)} utts | speech={total_speech:.1f}s")
 
+            sel_utts = sorted(sel_utts, key=lambda u: u.start)
             all_words = [w for u in sel_utts for w in u.words]
             segments = _words_to_segments(all_words, config.WORD_GAP_THRESHOLD) if all_words else [(u.start, u.end) for u in sel_utts]
             clip = Clip(
@@ -228,6 +281,9 @@ async def _process_single_video(
 
             # Hard cap on wall duration — clips spanning huge silences take forever to render
             MAX_WALL = 90.0
+            if clip.wall_duration <= 0 or clip.speech_duration <= 0:
+                print(f"  [SKIP] invalid clip timing | wall={clip.wall_duration:.1f}s | speech={clip.speech_duration:.1f}s")
+                continue
             if clip.wall_duration > MAX_WALL:
                 print(f"  [SKIP] wall={clip.wall_duration:.1f}s > {MAX_WALL}s cap — dropping")
                 continue
@@ -271,12 +327,16 @@ async def _process_single_video(
             print(f"[RENDER] clip_{global_index:03d} create_clip_video={success} exists={os.path.exists(clip_path)} size={os.path.getsize(clip_path) if os.path.exists(clip_path) else 0}")
 
             if success:
+                raw_path = clip_path.replace(".mp4", "_raw.mp4")
+                words_path = clip_path.replace(".mp4", "_words.json")
+                await asyncio.to_thread(upload_private_artifact, job_id, Path(raw_path).name, raw_path, "video/mp4")
+                await asyncio.to_thread(upload_private_artifact, job_id, Path(words_path).name, words_path, "application/json")
                 # Upload to Supabase Storage; fall back to Railway URL if unavailable
                 supabase_url = await asyncio.to_thread(upload_clip, job_id, clip_name, clip_path)
                 print(f"[RENDER] clip_{global_index:03d} upload_clip={supabase_url!r}")
                 clip_url = supabase_url or f"/api/video/{job_id}/{clip_name}"
 
-                generated.append({
+                clip_payload = {
                     "name": clip_name,
                     "index": global_index,
                     "transcript": clip.transcript,
@@ -290,7 +350,10 @@ async def _process_single_video(
                     "caption": story.get("caption", ""),
                     "clip_type": story.get("clip_type", ""),
                     "score_metrics": {},
-                })
+                }
+                generated.append(clip_payload)
+                subtitle_words = await asyncio.to_thread(_load_words_json, words_path)
+                await asyncio.to_thread(upsert_clip, job_id, clip_payload, subtitle_words, style_dict or {})
 
         print(f"[RENDER] pipeline done — {len(generated)} clips in generated list")
         return generated
@@ -311,6 +374,7 @@ async def _process_video(
     os.makedirs(jdir, exist_ok=True)
     with open(os.path.join(jdir, "meta.json"), "w") as mf:
         json.dump({"video_path": video_path, "filename": original_filename}, mf)
+    await asyncio.to_thread(upload_private_artifact, job_id, "meta.json", os.path.join(jdir, "meta.json"), "application/json")
     try:
         clips = await _process_single_video(job_id, video_path, jdir, style_dict=style_dict)
         if not clips:
@@ -487,16 +551,24 @@ async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Opti
             )
 
             if success:
-                generated.append({
+                raw_path = clip_path.replace(".mp4", "_raw.mp4")
+                words_path = clip_path.replace(".mp4", "_words.json")
+                await asyncio.to_thread(upload_private_artifact, job_id, Path(raw_path).name, raw_path, "video/mp4")
+                await asyncio.to_thread(upload_private_artifact, job_id, Path(words_path).name, words_path, "application/json")
+                supabase_url = await asyncio.to_thread(upload_clip, job_id, clip_name, clip_path)
+                clip_payload = {
                     "name": clip_name,
                     "index": i + 1,
                     "transcript": clip.transcript,
                     "start": round(clip.start, 2),
                     "end": round(clip.end, 2),
                     "duration": round(clip.speech_duration, 1),
-                    "url": f"/api/video/{job_id}/{clip_name}",
+                    "url": supabase_url or f"/api/video/{job_id}/{clip_name}",
                     "source": "AI Storyteller (Multiple clips)",
-                })
+                }
+                generated.append(clip_payload)
+                subtitle_words = await asyncio.to_thread(_load_words_json, words_path)
+                await asyncio.to_thread(upsert_clip, job_id, clip_payload, subtitle_words, style_dict or {})
 
         if not generated:
             _update_job(job_id, status="error", progress=0,
@@ -550,6 +622,7 @@ async def upload_video(
     upload_path = os.path.join(config.UPLOAD_DIR, f"{job_id}{ext}")
     with open(upload_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+    upload_raw(job_id, original_filename, upload_path)
 
     create_job(job_id, status="uploading", progress=2,
                message="Saving uploaded video...", logs=["Saving uploaded video..."],
@@ -642,6 +715,8 @@ async def serve_clip(job_id: str, clip_name: str):
         raise HTTPException(400, "Invalid clip name")
     clip_path = os.path.join(_job_dir(job_id), clip_name)
     if not os.path.exists(clip_path):
+        download_public_clip(job_id, clip_name, clip_path)
+    if not os.path.exists(clip_path):
         raise HTTPException(404, "Clip not found")
     return FileResponse(clip_path, media_type="video/mp4")
 
@@ -724,12 +799,16 @@ async def serve_raw_clip(job_id: str, clip_name: str):
 async def get_words(job_id: str, clip_name: str):
     if ".." in clip_name or "/" in clip_name:
         raise HTTPException(400, "Invalid clip name")
-    words_path = os.path.join(_job_dir(job_id), clip_name.replace(".mp4", "_words.json"))
+    _, _, words_path, _ = _clip_paths(job_id, clip_name)
+    if not os.path.exists(words_path):
+        _restore_words_from_db(job_id, clip_name, words_path)
+    if not os.path.exists(words_path):
+        _restore_clip_artifacts(job_id, clip_name)
+    if not os.path.exists(words_path):
+        _restore_words_from_db(job_id, clip_name, words_path)
     if not os.path.exists(words_path):
         raise HTTPException(404, "Words file not found")
-    import json
-    with open(words_path, "r") as f:
-        return json.load(f)
+    return _load_words_json(words_path)
 
 
 @app.post("/api/render-subtitles/{job_id}/{clip_name}")
@@ -737,18 +816,19 @@ async def render_subtitles(job_id: str, clip_name: str, req: RenderSubtitlesRequ
     if ".." in clip_name or "/" in clip_name:
         raise HTTPException(400, "Invalid clip name")
 
-    jdir = _job_dir(job_id)
-    raw_path = os.path.join(jdir, clip_name.replace(".mp4", "_raw.mp4"))
-    out_path = os.path.join(jdir, clip_name)
-    words_path = os.path.join(jdir, clip_name.replace(".mp4", "_words.json"))
+    raw_path, out_path, words_path, _ = _clip_paths(job_id, clip_name)
 
+    if not os.path.exists(words_path):
+        _restore_words_from_db(job_id, clip_name, words_path)
+    if not os.path.exists(raw_path) or not os.path.exists(words_path):
+        _restore_clip_artifacts(job_id, clip_name)
+    if not os.path.exists(words_path):
+        _restore_words_from_db(job_id, clip_name, words_path)
     if not os.path.exists(raw_path) or not os.path.exists(words_path):
         raise HTTPException(404, "Required raw files missing")
 
     try:
-        import json
-        with open(words_path, "r") as f:
-            wdata = json.load(f)
+        wdata = _load_words_json(words_path)
 
         # If word_overrides provided, replace word text while keeping original timestamps
         if req.word_overrides:
@@ -757,8 +837,7 @@ async def render_subtitles(job_id: str, clip_name: str, req: RenderSubtitlesRequ
                 if i in overrides:
                     w["word"] = overrides[i]
             # Persist edited words so future re-applies keep the corrections
-            with open(words_path, "w") as f:
-                json.dump(wdata, f)
+            _write_words_json(words_path, wdata)
 
         words = [WordSegment(**w) for w in wdata]
 
@@ -774,6 +853,19 @@ async def render_subtitles(job_id: str, clip_name: str, req: RenderSubtitlesRequ
 
         if not success:
             raise HTTPException(500, "Failed to burn subtitles")
+
+        await asyncio.to_thread(upload_private_artifact, job_id, Path(words_path).name, words_path, "application/json")
+        public_url = await asyncio.to_thread(upload_clip, job_id, clip_name, out_path)
+        transcript = " ".join((w.get("word") or "").strip() for w in wdata).strip()
+        await asyncio.to_thread(
+            save_subtitle_state,
+            job_id,
+            clip_name,
+            wdata,
+            req.model_dump(exclude={"word_overrides"}),
+            public_url or f"/api/video/{job_id}/{clip_name}",
+            transcript,
+        )
 
         return {"success": True, "url": f"/api/video/{job_id}/{clip_name}"}
     except Exception as e:
@@ -792,6 +884,11 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
         source_jdir = _job_dir(source_job_id)
         meta_path = os.path.join(source_jdir, "meta.json")
         trans_path = os.path.join(source_jdir, "transcription.json")
+
+        if not os.path.exists(meta_path):
+            download_private_artifact(source_job_id, "meta.json", meta_path)
+        if not os.path.exists(trans_path):
+            download_private_artifact(source_job_id, "transcription.json", trans_path)
 
         if not os.path.exists(meta_path):
             raise ValueError("No metadata found for this job. Was it uploaded via single-video mode?")
@@ -897,6 +994,7 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
                     total_speech = sum(u.duration for u in sel_utts)
                     print(f"  [HARNESS] Final: {len(sel_utts)} utts | speech={total_speech:.1f}s")
 
+            sel_utts = sorted(sel_utts, key=lambda u: u.start)
             all_words = [w for u in sel_utts for w in u.words]
             segments = _words_to_segments(all_words, config.WORD_GAP_THRESHOLD) if all_words else [(u.start, u.end) for u in sel_utts]
             clip = Clip(
@@ -907,6 +1005,9 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
                 words=all_words,
                 index=len(clips_with_meta) + 1,
             )
+            if clip.wall_duration <= 0 or clip.speech_duration <= 0:
+                print(f"  [SKIP] invalid clip timing | wall={clip.wall_duration:.1f}s | speech={clip.speech_duration:.1f}s")
+                continue
             print(f"  [CLIP] #{len(clips_with_meta)+1} built | wall={clip.wall_duration:.1f}s | speech={clip.speech_duration:.1f}s")
             clips_with_meta.append((clip, story))
 
@@ -934,20 +1035,28 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
                 create_clip_video, video_path, clip, clip_path, crop_filter, style_dict
             )
             if success:
-                generated.append({
+                raw_path = clip_path.replace(".mp4", "_raw.mp4")
+                words_path = clip_path.replace(".mp4", "_words.json")
+                await asyncio.to_thread(upload_private_artifact, job_id, Path(raw_path).name, raw_path, "video/mp4")
+                await asyncio.to_thread(upload_private_artifact, job_id, Path(words_path).name, words_path, "application/json")
+                supabase_url = await asyncio.to_thread(upload_clip, job_id, clip_name, clip_path)
+                clip_payload = {
                     "name": clip_name,
                     "index": render_idx + 1,
                     "transcript": clip.transcript,
                     "start": round(clip.start, 2),
                     "end": round(clip.end, 2),
                     "duration": round(clip.speech_duration, 1),
-                    "url": f"/api/video/{job_id}/{clip_name}",
+                    "url": supabase_url or f"/api/video/{job_id}/{clip_name}",
                     "source": filename,
                     "score": story.get("score"),
                     "score_summary": story.get("summary", ""),
                     "caption": story.get("caption", ""),
                     "score_metrics": {},
-                })
+                }
+                generated.append(clip_payload)
+                subtitle_words = await asyncio.to_thread(_load_words_json, words_path)
+                await asyncio.to_thread(upsert_clip, job_id, clip_payload, subtitle_words, style_dict or {})
 
         if not generated:
             raise ValueError("No clips were successfully rendered.")
@@ -955,8 +1064,10 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
         # Copy transcription cache to the new job dir too
         import shutil
         shutil.copy(trans_path, os.path.join(jdir, "transcription.json"))
+        await asyncio.to_thread(upload_private_artifact, job_id, "transcription.json", os.path.join(jdir, "transcription.json"), "application/json")
         with open(os.path.join(jdir, "meta.json"), "w") as mf:
             json.dump({"video_path": video_path, "filename": filename}, mf)
+        await asyncio.to_thread(upload_private_artifact, job_id, "meta.json", os.path.join(jdir, "meta.json"), "application/json")
 
         _update_job(job_id, status="done", progress=100,
                     message=f"Done! Re-generated {len(generated)} clips (cached transcription).",

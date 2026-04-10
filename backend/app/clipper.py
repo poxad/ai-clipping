@@ -340,8 +340,29 @@ def _merge_segments(segments: List[Tuple[float, float]]) -> List[Tuple[float, fl
     return [tuple(s) for s in merged]
 
 
-_FFMPEG_ENCODE = ["-c:v", "libx264", "-c:a", "aac", "-preset", "ultrafast", "-crf", "26"]
+_FFMPEG_ENCODE = [
+    "-c:v", "libx264",
+    "-c:a", "aac",
+    "-preset", "ultrafast",
+    "-crf", "26",
+    "-threads", "1",
+]
 _FFMPEG_TIMEOUT = 300  # 5 min hard cap per FFmpeg call
+_OUTPUT_W = 720
+_OUTPUT_H = 1280
+
+
+def _compose_video_filter(base_filter: Optional[str] = None) -> str:
+    filters = []
+    if base_filter:
+        filters.append(base_filter)
+    filters.append(
+        f"scale={_OUTPUT_W}:{_OUTPUT_H}:force_original_aspect_ratio=decrease"
+    )
+    filters.append(
+        f"pad={_OUTPUT_W}:{_OUTPUT_H}:(ow-iw)/2:(oh-ih)/2"
+    )
+    return ",".join(filters)
 
 
 # ---------------------------------------------------------------------------
@@ -544,13 +565,13 @@ def _ffmpeg_trim(
     crop_filter: Optional[str] = None,
 ):
     print(f"[FFMPEG] trim {start:.1f}s–{end:.1f}s → {os.path.basename(output_path)}")
-    vf = crop_filter or None
+    vf = _compose_video_filter(crop_filter)
     cmd = [
         config.FFMPEG_BIN, "-y",
         "-ss", f"{start:.3f}",
         "-to", f"{end:.3f}",
         "-i", input_video,
-        *(["-vf", vf] if vf else []),
+        "-vf", vf,
         *_FFMPEG_ENCODE,
         output_path,
     ]
@@ -564,11 +585,11 @@ def _ffmpeg_concat(
     """Build filter_complex to concat multiple video+audio segments."""
     print(f"[FFMPEG] concat {len(segments)} segments → {os.path.basename(output_path)}")
     filter_parts = []
-    crop_chain = f",{crop_filter}" if crop_filter else ""
+    video_chain = _compose_video_filter(crop_filter)
 
     for i, (start, end) in enumerate(segments):
         filter_parts.append(
-            f"[0:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS{crop_chain}[v{i}]"
+            f"[0:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,{video_chain}[v{i}]"
         )
         filter_parts.append(
             f"[0:a]atrim=start={start:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[a{i}]"
@@ -654,9 +675,9 @@ def _ffmpeg_multisource_concat(segments: list, output_path: str):
     
     for i, (idx, path, start, end, crop_filter) in enumerate(segments):
         cmd.extend(["-i", path])
-        crop_chain = f",{crop_filter}" if crop_filter else ""
+        video_chain = _compose_video_filter(crop_filter)
         filter_parts.append(
-            f"[{i}:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS{crop_chain}[v{i}]"
+            f"[{i}:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,{video_chain}[v{i}]"
         )
         filter_parts.append(
             f"[{i}:a]atrim=start={start:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[a{i}]"
