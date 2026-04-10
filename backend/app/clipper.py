@@ -303,17 +303,20 @@ def create_clip_video(
                     import json, dataclasses
                     with open(output_path.replace(".mp4", "_words.json"), "w") as wf:
                         json.dump([dataclasses.asdict(w) for w in remapped], wf)
-                        
+
                     _generate_ass(remapped, ass_path, style=style)
-                    if _burn_ass(tmp_path, ass_path, output_path):
-                        return os.path.exists(output_path) and os.path.getsize(output_path) > 0
+                    burned = _burn_ass(tmp_path, ass_path, output_path)
+                    if burned and os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                        return True
+                    # burn succeeded structurally but produced bad output — fall through to copy
+                    print(f"[CLIPPER] Subtitle burn failed or produced empty output — using raw clip")
             except Exception as e:
-                print(f"Subtitle error: {e}")
+                print(f"[CLIPPER] Subtitle error: {e}")
             finally:
                 if os.path.exists(ass_path):
                     os.remove(ass_path)
 
-        # Fall back to clip without subtitles, keeping raw intact
+        # Fall back to clip without subtitles
         import shutil
         shutil.copy(tmp_path, output_path)
         return os.path.exists(output_path) and os.path.getsize(output_path) > 0
@@ -522,10 +525,14 @@ def _burn_ass(input_path: str, ass_path: str, output_path: str) -> bool:
         result = subprocess.run(
             cmd,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             timeout=_FFMPEG_TIMEOUT,
         )
-        return result.returncode == 0
+        if result.returncode != 0:
+            stderr_tail = result.stderr[-500:].decode("utf-8", errors="replace") if result.stderr else ""
+            print(f"[FFMPEG] burn_ass failed (code {result.returncode}): {stderr_tail}")
+            return False
+        return True
     except subprocess.TimeoutExpired:
         print(f"[FFMPEG] burn_ass timed out after {_FFMPEG_TIMEOUT}s — skipping subtitles")
         return False
@@ -700,16 +707,18 @@ def create_multisource_clip_video(
                     import json, dataclasses
                     with open(output_path.replace(".mp4", "_words.json"), "w") as wf:
                         json.dump([dataclasses.asdict(w) for w in remapped], wf)
-                        
+
                     _generate_ass(remapped, ass_path, style=style)
-                    if _burn_ass(tmp_path, ass_path, output_path):
-                        return os.path.exists(output_path) and os.path.getsize(output_path) > 0
+                    burned = _burn_ass(tmp_path, ass_path, output_path)
+                    if burned and os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                        return True
+                    print(f"[CLIPPER] Subtitle burn failed or produced empty output — using raw clip")
             except Exception as e:
-                print(f"Subtitle Error: {e}")
+                print(f"[CLIPPER] Subtitle error (multisource): {e}")
             finally:
                 if os.path.exists(ass_path):
                     os.remove(ass_path)
-                    
+
         import shutil
         shutil.copy(tmp_path, output_path)
         return os.path.exists(output_path) and os.path.getsize(output_path) > 0
