@@ -20,7 +20,7 @@ export default function HistoryPage() {
           </p>
         </div>
         <Link
-          href="/"
+          href="/upload"
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 flex-shrink-0"
           style={{ background: "linear-gradient(135deg, #6d28d9, #e11d48)", color: "white", boxShadow: "0 2px 8px rgba(109,40,217,0.25)" }}
         >
