@@ -305,6 +305,38 @@ Platform: TikTok / Instagram Reels / YouTube Shorts — Indonesian Gen-Z/Millenn
 The VIEWER is someone scrolling their feed. They will swipe away in 1.5 seconds unless you hook them.
 
 ═══════════════════════════════════════
+BAHASA INDONESIA — LANGUAGE GUIDE
+═══════════════════════════════════════
+The transcript is spoken Bahasa Indonesia. Whisper may transcribe it imperfectly.
+Key patterns to recognize:
+
+FILLER words to SKIP (these add no value):
+  "eh", "em", "um", "hmm", "gitu", "gitu loh", "gitu ya", "ya ya ya", "oke oke",
+  "kan", "sih", "nih", "deh", "lah", "nah", "tuh", "yuk", "nggak sih", "mungkin ya"
+
+STRONG emotional signals (prioritize these):
+  Surprise: "wah!", "lho!", "aduh!", "oh iya!", "masya Allah!", "seriusan?"
+  Delight: "bagus banget!", "cocok!", "pas banget!", "lucu banget!", "keren!"
+  Warmth: "makasih ya kak", "iya sama-sama", "senang bisa bantu"
+  Laughter signals: "hahaha", "hehe", "ih lucu"
+
+CUSTOMER JOURNEY markers:
+  Opening: "selamat datang", "halo kak", "silakan", "ada yang bisa dibantu", "mau cari apa kak"
+  Browsing: "mau liat-liat dulu", "ada yang ini?", "berapa harga", "mau yang warna apa"
+  Try-on: "coba dulu ya", "lihat di cermin", "ini pas nggak", "gimana menurut kakak"
+  Service: "ini framenya", "lensanya", "ukurannya", "minusnya", "saya rekomendasikan"
+  Close: "total", "bayar", "makasih kak", "ditunggu lagi", "selamat menikmati", "hati-hati"
+
+MIXED LANGUAGE (normal in Indonesian retail):
+  English words that appear naturally: "okay", "done", "good", "free", "check", "ready"
+  Treat these as normal Indonesian — do not penalize or skip them.
+
+INFORMAL INDONESIAN forms (Whisper may transcribe these strangely — still count them):
+  "nggak" = tidak (no)    |  "gimana" = bagaimana (how)  |  "kayak" = seperti (like)
+  "banget" = sangat (very) |  "udah" = sudah (already)    |  "mau" = ingin (want)
+  "kak" / "mas" / "mbak" = polite address terms (ignore for content, they add warmth)
+
+═══════════════════════════════════════
 VIRAL CLIP TYPES — find ALL that exist in the footage
 ═══════════════════════════════════════
 Look for EVERY one of these patterns. Each good instance = its own separate clip.
@@ -348,6 +380,30 @@ SELECTION RULES — per clip
   ❌ Skip: utterances longer than 8 seconds unless they contain the emotional peak of the clip
   ❌ Skip: utterances that duplicate information already in another selected utterance for the SAME clip
   ❌ Do NOT select consecutive ID blocks just because they are adjacent — cherry-pick the best moments
+
+═══════════════════════════════════════
+ENDING RULE — CRITICAL, no exceptions
+═══════════════════════════════════════
+The LAST utterance of every clip MUST be a natural conversational close. The viewer must feel
+the clip is complete — not cut off. This is the single most common reason clips feel bad.
+
+✅ Valid clip endings in Bahasa Indonesia:
+  • Goodbye/thanks: "makasih kak", "terima kasih", "ditunggu lagi ya", "selamat menikmati",
+    "sampai jumpa", "have a nice day", "bye bye kak", "hati-hati di jalan"
+  • Confirmation close: "oke siap kak", "beres", "sudah ya kak", "nah gitu", "oke done"
+  • Satisfied reaction (complete): "wah bagus banget!", "cocok banget!", "pas nih!", "suka!"
+  • Price/checkout close: "total sekian ya", "ini struk nya kak", "sudah lunas ya"
+  • Punchline or laughter that wraps up a moment (the laugh IS the ending)
+
+❌ NEVER end a clip on:
+  • A half-finished sentence or trailing phrase ("jadi itu...", "terus nanti...", "kalau...")
+  • A question left unanswered ("mau yang mana kak?", "ada kartu anggota?")
+  • A transition phrase ("oh iya", "sebentar ya", "tunggu dulu")
+  • Ambient noise or silence after the last meaningful word
+  • An utterance that references something not shown in the clip ("yang tadi itu...")
+
+If the best sequence has no clean ending available — TRIM the last utterance. It is better
+to drop the last 1–2 utterances and end on a clean close than to keep a confusing tail.
 
 ═══════════════════════════════════════
 COVERAGE REQUIREMENT — find ALL 4 pillars
@@ -565,9 +621,11 @@ For EACH clip, evaluate these 4 dimensions (score each 1–10):
 1. **virality** — How shareable and attention-grabbing is this? Does it have a strong hook or memorable moment?
 2. **coherence** — Does it make sense as a standalone clip? Is the story complete and followable?
 3. **energy** — Is the pacing engaging? Is there emotional resonance (warmth, humor, excitement)?
-4. **completeness** — Does it have a clear start and end? Not cut off mid-sentence?
+4. **completeness** — Does it start cleanly and END cleanly? The END matters most — does it close on a natural
+   goodbye, satisfied reaction, punchline, or complete sentence? A clip that cuts off mid-conversation scores ≤4 here.
+   Indonesian close markers: "makasih kak", "ditunggu lagi", "selamat menikmati", "cocok!", "oke done", laughter that wraps up.
 
-Then compute a single **overall score** (1–10, one decimal) as a weighted average: virality×0.35 + coherence×0.30 + energy×0.20 + completeness×0.15.
+Then compute a single **overall score** (1–10, one decimal) as a weighted average: virality×0.30 + coherence×0.30 + energy×0.15 + completeness×0.25.
 
 Also write a **summary**: 1 concise English sentence explaining what makes this clip strong or weak.
 

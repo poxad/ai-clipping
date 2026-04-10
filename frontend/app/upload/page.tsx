@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { UploadZone } from "@/components/upload/UploadZone";
 import { BatchPreview } from "@/components/upload/BatchPreview";
@@ -62,10 +62,14 @@ export default function UploadPage() {
     localStorage.setItem(VOCAB_KEY, whisperVocab);
   }, [whisperVocab]);
 
+  const prevStatus = useRef<string>("");
   useEffect(() => {
-    if (pollState.status === "done" && jobId) {
+    // Only redirect if the status *transitioned* to done during this session
+    // (not if we loaded with an already-done stale job from localStorage)
+    if (pollState.status === "done" && jobId && prevStatus.current !== "" && prevStatus.current !== "done") {
       router.push(`/history/${jobId}`);
     }
+    prevStatus.current = pollState.status;
   }, [pollState.status, jobId, router]);
 
   function buildStyle(): StylePayload | null {
@@ -141,7 +145,7 @@ export default function UploadPage() {
           <SectionLabel step={1} title="What type of video is this?" desc="Helps the AI pick better clip boundaries and captions" />
           <div className="grid grid-cols-2 gap-3">
             {([
-              { key: "retail",  icon: Store, label: "Employee Generated Contenta",  desc: "Customer service, product demos, try-ons" },
+              { key: "retail",  icon: Store, label: "Employee Generated Content",  desc: "Customer service, product demos, try-ons" },
               { key: "podcast", icon: Mic,   label: "Podcast / Talk",  desc: "Interviews, conversations, commentary" },
             ] as const).map(({ key, icon: Icon, label, desc }) => (
               <button

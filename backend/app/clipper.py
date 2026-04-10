@@ -267,10 +267,14 @@ def create_clip_video(
                  applied when input is landscape and needs reframing to 9:16.
     """
     padding = config.JUMP_CUT_PADDING
+    trailing_pad = 0.4  # extra breathing room at the end so clip doesn't feel cut off
     padded = [
         (max(0.0, s - padding), e + padding)
         for s, e in clip.segments
     ]
+    # Give the last segment extra trailing space so the clip ends naturally
+    if padded:
+        padded[-1] = (padded[-1][0], padded[-1][1] + trailing_pad)
     merged = _merge_segments(padded)
 
     if not merged:
@@ -646,11 +650,13 @@ def create_multisource_clip_video(
     style: Optional[dict] = None
 ) -> bool:
     padding = config.JUMP_CUT_PADDING
+    trailing_pad = 0.4
+    segs = list(clip.segments)
     raw_segments = []
-    
-    for s, e in clip.segments:
-        raw_segments.append(_map_global_to_local(max(0.0, s - padding), e + padding, sources))
-        
+    for i, (s, e) in enumerate(segs):
+        end_pad = padding + (trailing_pad if i == len(segs) - 1 else 0)
+        raw_segments.append(_map_global_to_local(max(0.0, s - padding), e + end_pad, sources))
+
     merged = _merge_multisource_segments(raw_segments)
     if not merged:
         return False

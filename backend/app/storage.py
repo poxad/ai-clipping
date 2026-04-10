@@ -44,7 +44,9 @@ def upload_clip(job_id: str, clip_name: str, local_path: str) -> Optional[str]:
         return public_url
 
     except Exception as e:
+        import traceback
         print(f"[STORAGE] Upload failed for {clip_name} (non-fatal): {e}")
+        traceback.print_exc()
         return None
 
 

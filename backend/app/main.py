@@ -26,7 +26,7 @@ from .reframer import get_portrait_crop_filter
 from .transcriber import WordSegment, extract_audio, transcribe
 from .scheduler import router as scheduler_router, scheduler_loop
 from .jobstore import init_db, create_job, update_job as _store_update, get_job
-from .storage import upload_clip, upload_raw
+from .storage import upload_clip
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -308,8 +308,6 @@ async def _process_video(
     os.makedirs(jdir, exist_ok=True)
     with open(os.path.join(jdir, "meta.json"), "w") as mf:
         json.dump({"video_path": video_path, "filename": original_filename}, mf)
-    # Upload original to Supabase Storage (best-effort, don't block pipeline)
-    await asyncio.to_thread(upload_raw, job_id, original_filename, video_path)
     try:
         clips = await _process_single_video(job_id, video_path, jdir, style_dict=style_dict)
         _update_job(job_id, status="done", progress=100,

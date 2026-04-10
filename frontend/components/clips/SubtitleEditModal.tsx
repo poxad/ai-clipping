@@ -265,7 +265,7 @@ function MiniTemplateCard({
       <span style={{
         fontSize: 10,
         fontWeight: isSelected ? 700 : 500,
-        color: isSelected ? "#a78bfa" : "rgba(255,255,255,0.45)",
+        color: isSelected ? "#6d28d9" : "#9e9b94",
         textAlign: "center",
         maxWidth: 72 + 4,
         overflow: "hidden",
@@ -596,7 +596,7 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
           {/* Left — video player */}
           <div
             className="flex-shrink-0 flex flex-col items-center justify-center gap-4 p-5"
-            style={{ width: 340, background: "#0d0d14", borderRight: "1px solid #1e1e2e" }}
+            style={{ width: 340, background: "#111827", borderRight: "1px solid #1e1e2e" }}
           >
             <video
               ref={videoRef}
@@ -606,7 +606,7 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
               loop
               style={{ width: "100%", borderRadius: 10, display: "block", background: "#000" }}
             />
-            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textAlign: "center", lineHeight: 1.5 }}>
               Click a subtitle line to jump to that moment
             </p>
           </div>
@@ -696,8 +696,8 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
                 <div className="flex-1 flex flex-col overflow-hidden" style={{ borderRight: "1px solid #f0ede8" }}>
 
                   {/* Template gallery */}
-                  <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #1e1e2e", background: "#0d0d14", flexShrink: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 10 }}>
+                  <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #e4e1da", background: "#fafaf8", flexShrink: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9e9b94", marginBottom: 10 }}>
                       Templates
                     </div>
                     <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6 }} className="no-scrollbar">
@@ -713,8 +713,8 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
                   </div>
 
                   {/* Font picker */}
-                  <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid #1e1e2e", background: "#0d0d14", flexShrink: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 8 }}>
+                  <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid #e4e1da", background: "#fafaf8", flexShrink: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9e9b94", marginBottom: 8 }}>
                       Font
                     </div>
                     <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }} className="no-scrollbar">
@@ -731,9 +731,9 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
                               fontSize: 13,
                               fontFamily: FONT_CSS[font] || `"${font}", sans-serif`,
                               fontWeight: 600,
-                              background: isActive ? "rgba(109,40,217,0.25)" : "rgba(255,255,255,0.06)",
-                              color: isActive ? "#c4b5fd" : "rgba(255,255,255,0.55)",
-                              border: `1.5px solid ${isActive ? "rgba(109,40,217,0.6)" : "rgba(255,255,255,0.1)"}`,
+                              background: isActive ? "rgba(109,40,217,0.1)" : "#f0ede8",
+                              color: isActive ? "#6d28d9" : "#706d67",
+                              border: `1.5px solid ${isActive ? "rgba(109,40,217,0.4)" : "#e4e1da"}`,
                               cursor: "pointer",
                               transition: "all 0.15s ease",
                               whiteSpace: "nowrap",
@@ -886,9 +886,9 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
                 {/* Phone preview panel */}
                 <div
                   className="flex-shrink-0 flex flex-col items-center justify-start gap-4 p-5"
-                  style={{ width: 300, background: "#0d0d14", overflowY: "auto" }}
+                  style={{ width: 300, background: "#fafaf8", borderLeft: "1px solid #e4e1da", overflowY: "auto" }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", alignSelf: "flex-start" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9e9b94", alignSelf: "flex-start" }}>
                     Live Preview
                   </div>
                   <PhonePreview style={s} />
@@ -896,10 +896,10 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
                     value={s.previewText}
                     onChange={(e) => set("previewText", e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
-                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#ffffff", outline: "none" }}
+                    style={{ background: "#ffffff", border: "1px solid #e4e1da", color: "#1c1917", outline: "none" }}
                     placeholder="Preview text…"
                   />
-                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textAlign: "center", lineHeight: 1.6 }}>
+                  <p style={{ fontSize: 10, color: "#c4c1bb", textAlign: "center", lineHeight: 1.6 }}>
                     Style changes apply to all subtitles when you save.
                   </p>
                 </div>
