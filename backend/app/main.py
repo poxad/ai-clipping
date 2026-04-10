@@ -268,10 +268,12 @@ async def _process_single_video(
             success = await asyncio.to_thread(
                 create_clip_video, video_path, clip, clip_path, crop_filter, style_dict
             )
+            print(f"[RENDER] clip_{global_index:03d} create_clip_video={success} exists={os.path.exists(clip_path)} size={os.path.getsize(clip_path) if os.path.exists(clip_path) else 0}")
 
             if success:
                 # Upload to Supabase Storage; fall back to Railway URL if unavailable
                 supabase_url = await asyncio.to_thread(upload_clip, job_id, clip_name, clip_path)
+                print(f"[RENDER] clip_{global_index:03d} upload_clip={supabase_url!r}")
                 clip_url = supabase_url or f"/api/video/{job_id}/{clip_name}"
 
                 generated.append({
@@ -290,6 +292,7 @@ async def _process_single_video(
                     "score_metrics": {},
                 })
 
+        print(f"[RENDER] pipeline done — {len(generated)} clips in generated list")
         return generated
 
     finally:
