@@ -47,8 +47,8 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "Jumo — AI TikTok Clip Generator",
-  description: "Upload store videos. AI clips them into TikTok-ready shorts automatically.",
+  title: "Jumo | Professional AI Video Clipping Workspace",
+  description: "Upload source videos, generate short clips, refine subtitles, review history, and manage TikTok scheduling from one workspace.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

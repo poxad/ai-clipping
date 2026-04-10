@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useJob } from "@/lib/JobContext";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, X } from "lucide-react";
 
 export function JobToast() {
-  const { jobId, pollState } = useJob();
+  const { jobId, pollState, reset } = useJob();
   const router = useRouter();
 
   if (!jobId) return null;
@@ -18,7 +18,7 @@ export function JobToast() {
 
   return (
     <div
-      className="fixed bottom-5 right-5 z-50 flex flex-col gap-1.5 rounded-2xl px-4 py-3 cursor-pointer transition-all"
+      className="group fixed bottom-5 right-5 z-50 flex flex-col gap-1.5 rounded-2xl px-4 py-3 cursor-pointer transition-all"
       style={{
         background: "#ffffff",
         border: `1px solid ${isError ? "rgba(220,38,38,0.25)" : isDone ? "rgba(22,163,74,0.25)" : "#e4e1da"}`,
@@ -28,6 +28,14 @@ export function JobToast() {
       }}
       onClick={() => router.push(isDone || isError ? `/history/${jobId}` : "/upload")}
     >
+      <button
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0.5 hover:bg-black/10"
+        style={{ color: "#9e9b94" }}
+        onClick={(e) => { e.stopPropagation(); reset(); }}
+        aria-label="Dismiss"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
       <div className="flex items-center gap-2.5">
         {isActive && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "#6d28d9" }} />}
         {isDone && <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#16a34a" }} />}

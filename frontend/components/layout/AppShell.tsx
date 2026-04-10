@@ -17,7 +17,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         style={{
           marginLeft: showSidebar ? "var(--sidebar-w)" : 0,
           minHeight: "100vh",
-          background: showSidebar ? "#f7f6f3" : "transparent",
+          background: showSidebar
+            ? "linear-gradient(180deg, rgba(255,253,248,0.82), rgba(244,240,232,0.96))"
+            : "transparent",
         }}
       >
         {children}
