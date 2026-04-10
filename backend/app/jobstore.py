@@ -46,7 +46,7 @@ def _sb_upsert(job_id: str, data: dict):
         try:
             from .supabase_client import get_client
             sb = get_client()
-            sb.table("jobs").upsert({"job_id": job_id, **data}).execute()
+            sb.table("jobs").upsert({"job_id": job_id, **data}, on_conflict="job_id").execute()
         except Exception as e:
             print(f"[SUPABASE] upsert failed (non-fatal): {e}")
 

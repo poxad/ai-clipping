@@ -27,7 +27,7 @@ export default function LandingPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Link
+          {/* <Link
             href="/login"
             style={{
               padding: "8px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
@@ -35,9 +35,9 @@ export default function LandingPage() {
             }}
           >
             Log in
-          </Link>
+          </Link> */}
           <Link
-            href="/register"
+            href="/upload"
             style={{
               padding: "8px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
               background: "linear-gradient(135deg, #6d28d9, #7c3aed)",
@@ -45,7 +45,7 @@ export default function LandingPage() {
               boxShadow: "0 2px 12px rgba(109,40,217,0.35)",
             }}
           >
-            Get started
+            Dashboard
           </Link>
         </div>
       </nav>
