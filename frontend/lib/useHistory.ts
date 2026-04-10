@@ -58,11 +58,15 @@ export function useHistory() {
       count: clips.length,
       date: new Date().toLocaleString(),
     };
-    setHistory((prev) => {
+    // Write to localStorage synchronously so the history detail page can read it
+    // immediately after a redirect — don't rely on the async state updater.
+    try {
+      const raw = localStorage.getItem(KEY);
+      const prev: HistoryEntry[] = raw ? JSON.parse(raw) : [];
       const next = [entry, ...prev.filter((e) => e.jobId !== jobId)].slice(0, MAX);
-      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {}
+    setHistory((prev) => [entry, ...prev.filter((e) => e.jobId !== jobId)].slice(0, MAX));
   }
 
   return { history, addEntry };

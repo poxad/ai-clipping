@@ -103,7 +103,10 @@ export async function uploadBatch(files: File[], style: StylePayload): Promise<s
   const fd = new FormData();
   files.forEach((f) => fd.append("files", f));
   fd.append("style", JSON.stringify(style));
-  const res = await fetch(`${BASE}/api/upload-batch`, { method: "POST", body: fd });
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/upload-batch`, { method: "POST", body: fd, headers });
   if (!res.ok) throw new Error(`Batch upload failed: ${res.statusText}`);
   const data = await res.json();
   return data.job_id;

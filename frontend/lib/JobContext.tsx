@@ -79,8 +79,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         if (TERMINAL.has(data.status)) {
           if (timerRef.current) clearInterval(timerRef.current);
           localStorage.removeItem(STORAGE_KEY);
-          if (data.status === "done" && data.clips?.length) {
-            addEntry(jobId!, data.clips);
+          if (data.status === "done") {
+            addEntry(jobId!, data.clips ?? []);
           }
         }
       } catch {

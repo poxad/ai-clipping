@@ -37,38 +37,81 @@ export default function HistoryDetailPage() {
       }
     } catch {}
 
-    // 2. Not in localStorage — poll the backend until done or error
-    setPolling(true);
-    let timer: ReturnType<typeof setInterval>;
-
-    async function poll() {
+    // 2. Try Supabase directly (survives Railway restarts)
+    async function trySupabase(): Promise<boolean> {
       try {
-        const data = await getStatus(id);
-
-        if (data.status === "done" && data.clips?.length) {
-          clearInterval(timer);
-          setPolling(false);
+        const { createClient } = await import("@/lib/supabase");
+        const sb = createClient();
+        const { data } = await sb.from("jobs")
+          .select("job_id, clips, created_at, filename")
+          .eq("job_id", id)
+          .eq("status", "done")
+          .single();
+        if (data?.clips?.length) {
           const e: HistoryEntry = {
-            jobId: id,
+            jobId: data.job_id,
             clips: data.clips,
             count: data.clips.length,
-            date: new Date().toLocaleString(),
+            date: new Date(data.created_at).toLocaleString(),
           };
           addEntry(id, data.clips);
           setEntry(e);
+          return true;
+        }
+      } catch {}
+      return false;
+    }
+
+    // 3. Not in Supabase yet — poll the backend until done or error
+    setPolling(true);
+    let timer: ReturnType<typeof setInterval>;
+    let backendErrors = 0;
+    const MAX_BACKEND_ERRORS = 5;
+
+    async function poll() {
+      // Check Supabase first on each poll (backend SQLite is wiped on restart)
+      if (await trySupabase()) {
+        clearInterval(timer);
+        setPolling(false);
+        return;
+      }
+
+      try {
+        const data = await getStatus(id);
+        backendErrors = 0; // reset on success
+
+        if (data.status === "done") {
+          clearInterval(timer);
+          setPolling(false);
+          if (data.clips?.length) {
+            const e: HistoryEntry = {
+              jobId: id,
+              clips: data.clips,
+              count: data.clips.length,
+              date: new Date().toLocaleString(),
+            };
+            addEntry(id, data.clips);
+            setEntry(e);
+          } else {
+            // done but no clips — show not found
+            setEntry(null);
+          }
         } else if (data.status === "error") {
           clearInterval(timer);
           setPolling(false);
           setEntry(null);
         } else {
-          // Still processing — show progress to user
           setPollMessage(data.message || "Processing…");
         }
       } catch {
-        // Job not found on backend at all
-        clearInterval(timer);
-        setPolling(false);
-        setEntry(null);
+        // Backend unreachable — could be a transient error or restart.
+        // Retry up to MAX_BACKEND_ERRORS times before giving up.
+        backendErrors += 1;
+        if (backendErrors >= MAX_BACKEND_ERRORS) {
+          clearInterval(timer);
+          setPolling(false);
+          setEntry(null);
+        }
       }
     }
 
