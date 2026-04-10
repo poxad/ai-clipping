@@ -594,13 +594,18 @@ def _run_ffmpeg(cmd: List[str]):
         result = subprocess.run(
             cmd,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             timeout=_FFMPEG_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
         raise RuntimeError(f"FFmpeg timed out after {_FFMPEG_TIMEOUT}s")
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg exited with code {result.returncode}")
+        stderr_tail = ""
+        if result.stderr:
+            stderr_tail = result.stderr.decode("utf-8", errors="replace")[-1200:]
+        raise RuntimeError(
+            f"FFmpeg exited with code {result.returncode}. stderr tail:\n{stderr_tail}"
+        )
 
 
 # ---------------------------------------------------------------------------

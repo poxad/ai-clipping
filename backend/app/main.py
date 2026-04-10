@@ -313,6 +313,8 @@ async def _process_video(
         json.dump({"video_path": video_path, "filename": original_filename}, mf)
     try:
         clips = await _process_single_video(job_id, video_path, jdir, style_dict=style_dict)
+        if not clips:
+            raise ValueError("No clips were successfully rendered.")
         _update_job(job_id, status="done", progress=100,
                     message=f"Done! Generated {len(clips)} clips.", clips=clips)
     except Exception as exc:
@@ -542,17 +544,18 @@ async def upload_video(
 
     user_id = _extract_user_id(request)
     job_id = str(uuid.uuid4())
-    create_job(job_id, status="uploading", progress=2,
-               message="Saving uploaded video...", logs=["Saving uploaded video..."],
-               user_id=user_id)
+    original_filename = file.filename or f"{job_id}{ext}"
 
     # Save upload
     upload_path = os.path.join(config.UPLOAD_DIR, f"{job_id}{ext}")
     with open(upload_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
+    create_job(job_id, status="uploading", progress=2,
+               message="Saving uploaded video...", logs=["Saving uploaded video..."],
+               user_id=user_id, filename=original_filename)
+
     style_dict = json.loads(style) if style else {}
-    original_filename = file.filename or Path(upload_path).name
     background_tasks.add_task(_process_video, job_id, upload_path, style_dict, original_filename)
     return {"job_id": job_id}
 
@@ -580,8 +583,10 @@ async def upload_batch(
 
     user_id = _extract_user_id(request)
     job_id = str(uuid.uuid4())
+    filenames = [f.filename or f"video_{i}" for i, f in enumerate(files)]
     msg = f"Saving {len(files)} video(s)..."
-    create_job(job_id, status="uploading", progress=2, message=msg, logs=[msg], user_id=user_id)
+    create_job(job_id, status="uploading", progress=2, message=msg, logs=[msg],
+               user_id=user_id, filename=", ".join(filenames))
 
     saved_paths = []
     for i, f in enumerate(files):

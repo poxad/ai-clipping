@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Download, CalendarPlus, Pencil } from "lucide-react";
 import type { Clip } from "@/lib/types";
 import { videoUrl, clipName } from "@/lib/api";
@@ -28,6 +28,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
   const videoRef = useRef<HTMLVideoElement>(null);
   const name = clipName(clip);
   const url = (clip.url?.startsWith("http") ? clip.url : videoUrl(jobId, name)) + (urlSuffix ?? "");
+  const [videoDuration, setVideoDuration] = useState<number>(clip.duration || 0);
 
   const playPromise = useRef<Promise<void> | null>(null);
 
@@ -54,7 +55,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
     if (!videoRef.current) return;
     const v = videoRef.current;
     v.muted = true;
-    
+
     if (playPromise.current !== undefined && playPromise.current !== null) {
       playPromise.current
         .then(() => {
@@ -93,27 +94,24 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
         <video
           ref={videoRef}
           src={url}
-          preload="none"
+          preload="metadata"
           loop
           muted
           playsInline
           onClick={handleClick}
+          onLoadedMetadata={(e) => {
+            const d = (e.target as HTMLVideoElement).duration;
+            if (d && isFinite(d)) setVideoDuration(d);
+          }}
           className="w-full h-full object-contain"
           style={{ display: "block", background: "#111" }}
         />
-        {/* Clip index */}
-        <span
-          className="absolute top-2 left-2 text-xs font-bold px-1.5 py-0.5 rounded-md"
-          style={{ background: "rgba(0,0,0,0.55)", color: "#fff", backdropFilter: "blur(4px)" }}
-        >
-          #{String(clip.index).padStart(3, "0")}
-        </span>
         {/* Duration */}
         <span
           className="absolute bottom-2 right-2 text-xs font-bold px-1.5 py-0.5 rounded-md"
           style={{ background: "rgba(0,0,0,0.55)", color: "#fff", backdropFilter: "blur(4px)" }}
         >
-          {formatDuration(clip.duration)}
+          {formatDuration(videoDuration)}
         </span>
       </div>
 
@@ -138,30 +136,6 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
             {clip.caption}
           </p>
         )}
-
-        {/* {clip.transcript && (
-          <p
-            className="text-xs leading-relaxed"
-            style={{
-              color: "#9e9b94",
-              display: "-webkit-box",
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {clip.transcript}
-          </p>
-        )} */}
-
-        {/* {clip.source && (
-          <span
-            className="inline-block text-xs px-2 py-0.5 rounded-full"
-            style={{ background: "#f0ede8", color: "#9e9b94", border: "1px solid #e4e1da" }}
-          >
-            {clip.source}
-          </span>
-        )} */}
       </div>
 
       {/* Footer */}

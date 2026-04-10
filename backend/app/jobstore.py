@@ -122,6 +122,11 @@ def update_job(job_id: str, **kwargs):
         except (IndexError, KeyError):
             user_id = None
 
+        try:
+            filename = row["filename"]
+        except (IndexError, KeyError):
+            filename = None
+
         existing_logs: list = json.loads(row["logs"])
         if "message" in kwargs and kwargs["message"]:
             if not existing_logs or existing_logs[-1] != kwargs["message"]:
@@ -141,6 +146,8 @@ def update_job(job_id: str, **kwargs):
     }
     if user_id:
         sb_data["user_id"] = user_id
+    if filename:
+        sb_data["filename"] = filename
     _sb_upsert(job_id, sb_data)
 
 

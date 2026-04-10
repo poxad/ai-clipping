@@ -12,6 +12,7 @@ import { ScheduleModal } from "@/components/scheduler/ScheduleModal";
 import { useJob } from "@/lib/JobContext";
 import { useHistory } from "@/lib/useHistory";
 import { uploadSingle, uploadBatch } from "@/lib/api";
+import { useUserSettings } from "@/lib/useUserSettings";
 import type { Clip, StylePayload } from "@/lib/types";
 import { Store, Mic, ChevronDown, ChevronUp, Wand2, Check, X, Play } from "lucide-react";
 
@@ -19,6 +20,7 @@ type Mode = "single" | "batch";
 type ContentType = "retail" | "podcast";
 
 const VOCAB_KEY = "whisper_vocab";
+const CONTENT_TYPE_KEY = "content_type";
 
 function SectionLabel({ step, title, desc }: { step: number; title: string; desc: string }) {
   return (
@@ -50,18 +52,59 @@ export default function UploadPage() {
   const [subtitleStyle, setSubtitleStyle] = useState<StylePayload | null>(null);
   const [showVocab, setShowVocab] = useState(false);
   const [scheduleClip, setScheduleClip] = useState<Clip | null>(null);
+  const { processingSettings, saveProcessingSettings, loaded: settingsLoaded } = useUserSettings();
 
   const { history } = useHistory();
   const { jobId, pollState, startJob, reset } = useJob();
+  const didHydrateRemoteSettings = useRef(false);
+  const hasPrimedRemoteSave = useRef(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(VOCAB_KEY);
     if (saved) setWhisperVocab(saved);
+    const savedContentType = localStorage.getItem(CONTENT_TYPE_KEY);
+    if (savedContentType === "retail" || savedContentType === "podcast") {
+      setContentType(savedContentType);
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem(VOCAB_KEY, whisperVocab);
   }, [whisperVocab]);
+
+  useEffect(() => {
+    localStorage.setItem(CONTENT_TYPE_KEY, contentType);
+  }, [contentType]);
+
+  useEffect(() => {
+    if (!settingsLoaded || didHydrateRemoteSettings.current) return;
+
+    if (processingSettings?.contentType) {
+      setContentType(processingSettings.contentType);
+    }
+    if (processingSettings?.whisperVocab !== undefined) {
+      setWhisperVocab(processingSettings.whisperVocab);
+    }
+
+    didHydrateRemoteSettings.current = true;
+  }, [settingsLoaded, processingSettings]);
+
+  useEffect(() => {
+    if (!settingsLoaded || !didHydrateRemoteSettings.current) return;
+    if (!hasPrimedRemoteSave.current) {
+      hasPrimedRemoteSave.current = true;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void saveProcessingSettings({
+        contentType,
+        whisperVocab,
+      });
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [contentType, whisperVocab, settingsLoaded, saveProcessingSettings]);
 
   const prevStatus = useRef<string>("");
   useEffect(() => {
@@ -265,6 +308,9 @@ export default function UploadPage() {
                     lineHeight: 1.6,
                   }}
                 />
+                <p className="text-[11px] mt-2" style={{ color: "#c4c1bb" }}>
+                  Brand hints and content type are saved to your Supabase settings automatically.
+                </p>
               </div>
             )}
           </div>

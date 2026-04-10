@@ -53,7 +53,39 @@ CREATE POLICY "Users update own jobs"
 -- Service role can do everything (used by Railway backend — bypasses RLS)
 -- This is automatic for service_role key — no extra policy needed.
 
--- ── 3. Storage buckets ───────────────────────────────────────
+-- ── 3. User settings table ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.user_settings (
+    user_id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    subtitle_style  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    content_type    TEXT NOT NULL DEFAULT 'retail' CHECK (content_type IN ('retail', 'podcast')),
+    whisper_vocab   TEXT NOT NULL DEFAULT '',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS user_settings_updated_at ON public.user_settings;
+CREATE TRIGGER user_settings_updated_at
+    BEFORE UPDATE ON public.user_settings
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users see own settings" ON public.user_settings;
+CREATE POLICY "Users see own settings"
+    ON public.user_settings FOR SELECT
+    USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users insert own settings" ON public.user_settings;
+CREATE POLICY "Users insert own settings"
+    ON public.user_settings FOR INSERT
+    WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users update own settings" ON public.user_settings;
+CREATE POLICY "Users update own settings"
+    ON public.user_settings FOR UPDATE
+    USING (user_id = auth.uid());
+
+-- ── 4. Storage buckets ───────────────────────────────────────
 -- Run these one at a time if the bucket already exists
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -83,7 +115,7 @@ CREATE POLICY "Public clips readable"
 -- Only service role can insert/delete in clips (backend does this)
 -- Service role bypasses RLS automatically.
 
--- ── 4. Indexes ───────────────────────────────────────────────
+-- ── 5. Indexes ───────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS jobs_user_id_idx ON public.jobs (user_id);
 CREATE INDEX IF NOT EXISTS jobs_job_id_idx  ON public.jobs (job_id);
 CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON public.jobs (created_at DESC);
