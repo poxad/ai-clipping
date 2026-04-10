@@ -525,14 +525,14 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
       style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
     >
       <div
-        className="relative flex flex-col rounded-2xl overflow-hidden"
+        className="relative flex flex-col overflow-hidden rounded-2xl"
         style={{
-          width: "min(1280px, 98vw)",
-          height: "min(840px, 96vh)",
+          width: "min(1280px, 100vw)",
+          height: "min(840px, 100vh)",
           background: "#ffffff",
           border: "1px solid #e4e1da",
           boxShadow: "0 32px 100px rgba(0,0,0,0.3)",
@@ -541,7 +541,7 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
 
         {/* ── Header ── */}
         <div
-          className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
+          className="flex flex-wrap items-center justify-between gap-3 px-3 py-3.5 sm:px-5 flex-shrink-0"
           style={{ borderBottom: "1px solid #e4e1da", background: "#fafaf8" }}
         >
           <div className="flex items-center gap-2">
@@ -554,7 +554,7 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
           </div>
 
           {/* Main tab pills — centred */}
-          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "#f0ede8" }}>
+          <div className="flex max-w-full items-center gap-1 overflow-x-auto p-1 rounded-xl no-scrollbar" style={{ background: "#f0ede8" }}>
             <button
               onClick={() => setMainTab("subtitles")}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -591,12 +591,12 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
         </div>
 
         {/* ── Body ── */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
 
           {/* Left — video player */}
           <div
-            className="flex-shrink-0 flex flex-col items-center justify-center gap-4 p-5"
-            style={{ width: 340, background: "#111827", borderRight: "1px solid #1e1e2e" }}
+            className="flex flex-shrink-0 flex-col items-center justify-center gap-4 p-4 sm:p-5 lg:border-r"
+            style={{ width: "100%", maxWidth: 340, background: "#111827", borderColor: "#1e1e2e" }}
           >
             <video
               ref={videoRef}
@@ -690,10 +690,10 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
 
             {/* ── STYLE EDIT tab ── */}
             {mainTab === "style" && (
-              <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-1 flex-col overflow-hidden xl:flex-row">
 
                 {/* Style controls */}
-                <div className="flex-1 flex flex-col overflow-hidden" style={{ borderRight: "1px solid #f0ede8" }}>
+                <div className="flex flex-1 flex-col overflow-hidden xl:border-r" style={{ borderColor: "#f0ede8" }}>
 
                   {/* Template gallery */}
                   <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #e4e1da", background: "#fafaf8", flexShrink: 0 }}>
@@ -885,8 +885,8 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
 
                 {/* Phone preview panel */}
                 <div
-                  className="flex-shrink-0 flex flex-col items-center justify-start gap-4 p-5"
-                  style={{ width: 300, background: "#fafaf8", borderLeft: "1px solid #e4e1da", overflowY: "auto" }}
+                  className="flex flex-shrink-0 flex-col items-center justify-start gap-4 border-t p-4 sm:p-5 xl:w-[300px] xl:border-l xl:border-t-0"
+                  style={{ background: "#fafaf8", borderColor: "#e4e1da", overflowY: "auto" }}
                 >
                   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9e9b94", alignSelf: "flex-start" }}>
                     Live Preview
@@ -910,7 +910,7 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
 
         {/* ── Footer ── */}
         <div
-          className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
+          className="flex flex-col items-start justify-between gap-3 px-3 py-3.5 sm:flex-row sm:items-center sm:px-5 flex-shrink-0"
           style={{ borderTop: "1px solid #e4e1da", background: "#fafaf8" }}
         >
           {saveError ? (
@@ -921,7 +921,7 @@ export function SubtitleEditModal({ clip, jobId, onClose, onSaved }: Props) {
               {isDirty && <span style={{ color: "#6d28d9" }}> · text edited</span>}
             </span>
           )}
-          <div className="flex gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all"

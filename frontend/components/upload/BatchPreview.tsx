@@ -30,10 +30,10 @@ export function BatchPreview({ files, onClear, onUpload, uploading }: Props) {
         {files.map((f, i) => (
           <div
             key={i}
-            className="flex items-center justify-between px-4 py-2.5"
+            className="flex items-start justify-between gap-3 px-4 py-2.5"
             style={{ borderBottom: i < files.length - 1 ? "1px solid #f0ede8" : undefined }}
           >
-            <span className="text-sm truncate max-w-[70%]" style={{ color: "#1c1917" }}>
+            <span className="min-w-0 flex-1 text-sm break-words" style={{ color: "#1c1917" }}>
               {f.name}
             </span>
             <span className="text-xs ml-2 flex-shrink-0 tabular-nums" style={{ color: "#9e9b94" }}>
@@ -42,11 +42,11 @@ export function BatchPreview({ files, onClear, onUpload, uploading }: Props) {
           </div>
         ))}
       </div>
-      <div className="flex justify-end gap-2 px-4 py-3" style={{ borderTop: "1px solid #e4e1da" }}>
+      <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:justify-end" style={{ borderTop: "1px solid #e4e1da" }}>
         <button
           onClick={onClear}
           disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all"
           style={{ color: "#706d67", border: "1px solid #e4e1da", background: "#ffffff" }}
         >
           <X className="w-3.5 h-3.5" /> Clear
@@ -54,7 +54,7 @@ export function BatchPreview({ files, onClear, onUpload, uploading }: Props) {
         <button
           onClick={onUpload}
           disabled={uploading}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
           style={{
             background: "linear-gradient(135deg, #6d28d9, #e11d48)",
             color: "white",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Scissors, Upload, History, Settings, Calendar, BookOpen, LogOut, ChevronUp, User } from "lucide-react";
+import { Scissors, Upload, History, Settings, Calendar, BookOpen, LogOut, ChevronUp, User, X } from "lucide-react";
 import { useHistory } from "@/lib/useHistory";
 import { createClient } from "@/lib/supabase";
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ const nav = [
   { href: "/settings", label: "Settings", desc: "Clip preferences", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { history } = useHistory();
@@ -59,6 +59,12 @@ export function Sidebar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  // Close when navigating to a new page
+  useEffect(() => {
+    onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   async function handleLogout() {
     const sb = createClient();
     await sb.auth.signOut();
@@ -74,19 +80,24 @@ export function Sidebar() {
     : "?";
 
   return (
-    <aside
-      className="fixed top-0 left-0 h-screen flex flex-col z-40"
-      style={{
-        width: "var(--sidebar-w)",
-        background: "linear-gradient(180deg, rgba(251,248,242,0.98), rgba(246,240,230,0.96))",
-        borderRight: "1px solid #ddd4c5",
-        boxShadow: "inset -1px 0 0 rgba(255,255,255,0.55)",
-        backdropFilter: "blur(18px)",
-      }}
-    >
+    <>
+      <div
+        className={`fixed inset-0 z-40 bg-[rgba(23,36,44,0.38)] backdrop-blur-[2px] transition-opacity lg:hidden ${mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={onClose}
+      />
+      <aside
+        className={`sidebar-shell fixed top-0 left-0 z-50 flex h-screen flex-col transition-transform duration-300 ease-out lg:z-40 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        style={{
+          background: "linear-gradient(180deg, rgba(251,248,242,0.98), rgba(246,240,230,0.96))",
+          borderRight: "1px solid #ddd4c5",
+          boxShadow: "inset -1px 0 0 rgba(255,255,255,0.55)",
+          backdropFilter: "blur(18px)",
+        }}
+      >
       {/* Logo */}
       <div className="px-5 py-5" style={{ borderBottom: "1px solid #ddd4c5" }}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: "linear-gradient(135deg, #194e56, #2b6670)", boxShadow: "0 10px 24px rgba(25,78,86,0.22)" }}
@@ -102,6 +113,15 @@ export function Sidebar() {
             </div>
           </div>
         </div>
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border lg:hidden"
+            style={{ borderColor: "#ddd4c5", background: "rgba(255,253,248,0.9)", color: "#5f6a6d" }}
+            aria-label="Close navigation"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Nav */}
@@ -112,6 +132,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
               style={{
                 color: active ? "#194e56" : "#5f6a6d",
@@ -239,7 +260,8 @@ export function Sidebar() {
           />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

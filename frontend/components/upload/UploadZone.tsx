@@ -37,9 +37,9 @@ export function UploadZone({ mode, disabled, onSingleFile, onBatchFiles }: Props
         setDragging(false);
         handleFiles(e.dataTransfer.files);
       }}
-      className="rounded-2xl flex flex-col items-center justify-center gap-5 cursor-pointer transition-all"
+      className="flex cursor-pointer flex-col items-center justify-center gap-5 rounded-2xl px-4 py-6 text-center transition-all sm:px-6"
       style={{
-        minHeight: "260px",
+        minHeight: "220px",
         border: `2px dashed ${dragging ? "#6d28d9" : "#d4d0c9"}`,
         background: dragging
           ? "rgba(109,40,217,0.04)"
@@ -69,7 +69,7 @@ export function UploadZone({ mode, disabled, onSingleFile, onBatchFiles }: Props
       </div>
 
       {/* Text */}
-      <div className="text-center px-6">
+      <div className="px-2 sm:px-6">
         <p className="font-bold text-base" style={{ color: "#1c1917" }}>
           {dragging ? "Drop it here!" : "Drop your video here"}
         </p>
@@ -95,7 +95,7 @@ export function UploadZone({ mode, disabled, onSingleFile, onBatchFiles }: Props
       </button>
 
       {/* Formats */}
-      <div className="flex items-center gap-1.5 flex-wrap justify-center px-4">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 px-2 sm:px-4">
         {["MP4", "MOV", "AVI", "MKV", "WebM"].map((ext) => (
           <span
             key={ext}

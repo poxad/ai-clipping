@@ -33,7 +33,7 @@ const PILLARS = [
 
 export default function GuidePage() {
   return (
-    <div className="flex flex-col gap-8 p-8 max-w-3xl w-full">
+    <div className="flex w-full max-w-3xl flex-col gap-8 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2.5" style={{ color: "#1c1917" }}>
@@ -69,7 +69,7 @@ export default function GuidePage() {
         <p className="text-sm mb-4" style={{ color: "#706d67" }}>
           Each clip is evaluated across 4 dimensions. The final score is a weighted average:
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {METRICS.map((m) => (
             <div
               key={m.name}
@@ -129,7 +129,7 @@ export default function GuidePage() {
         <p className="text-sm mb-4" style={{ color: "#706d67" }}>
           For retail content, the AI always tries to find clips covering all 4 of these moments — even if some score lower than others.
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {PILLARS.map((p, i) => (
             <div
               key={p.name}

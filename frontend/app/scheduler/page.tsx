@@ -91,7 +91,7 @@ function AccountsPanel() {
       className="rounded-xl overflow-hidden flex flex-col"
       style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
-      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #e4e1da" }}>
+      <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
         <div>
           <h2 className="text-sm font-semibold" style={{ color: "#1c1917" }}>TikTok Accounts</h2>
           <p className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{accounts.length} connected</p>
@@ -214,9 +214,10 @@ function MonthCalendar({
   const monthLabel = viewDate.toLocaleString(undefined, { month: "long", year: "numeric" });
 
   return (
-    <div>
+    <div className="overflow-x-auto">
+      <div style={{ minWidth: 290 }}>
       {/* Month nav */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <button
           onClick={() => setViewDate(new Date(year, month - 1, 1))}
           className="p-1.5 rounded-lg transition-all"
@@ -310,6 +311,7 @@ function MonthCalendar({
           );
         })}
       </div>
+      </div>
     </div>
   );
 }
@@ -399,7 +401,7 @@ function ScheduleCalendar() {
       style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #e4e1da" }}>
+      <div className="flex items-center justify-between px-4 py-4 sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
         <div>
           <h2 className="text-sm font-semibold" style={{ color: "#1c1917" }}>Schedule</h2>
           <p className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>
@@ -430,7 +432,7 @@ function ScheduleCalendar() {
       ) : (
         <div className="flex flex-col">
           {/* Calendar */}
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid #e4e1da" }}>
+          <div className="px-3 py-4 sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
             <MonthCalendar
               posts={posts}
               selectedDate={selectedDate}
@@ -442,7 +444,7 @@ function ScheduleCalendar() {
           <div className="flex flex-col gap-0" style={{ maxHeight: 340, overflowY: "auto" }}>
             {/* Section label */}
             <div
-              className="flex items-center justify-between px-5 py-2.5 sticky top-0"
+              className="sticky top-0 flex items-center justify-between px-3 py-2.5 sm:px-5"
               style={{ background: "#fafaf8", borderBottom: "1px solid #e4e1da", zIndex: 1 }}
             >
               <span className="text-xs font-semibold" style={{ color: "#9e9b94" }}>
@@ -477,7 +479,7 @@ function ScheduleCalendar() {
               visiblePosts.map((post) => (
                 <div
                   key={post.id}
-                  className="flex items-center gap-3 px-5 py-3"
+                  className="flex flex-wrap items-start gap-3 px-3 py-3 sm:items-center sm:px-5"
                   style={{ borderBottom: "1px solid #f0ede8" }}
                 >
                   {/* Time */}
@@ -499,7 +501,7 @@ function ScheduleCalendar() {
                       />
                     </div>
                   ) : (
-                    <div className="flex-shrink-0 text-right" style={{ width: 44 }}>
+                    <div className="flex-shrink-0 text-left sm:text-right" style={{ width: 56 }}>
                       <span className="text-xs font-semibold tabular-nums" style={{ color: "#706d67" }}>
                         {new Date(post.scheduled_at * 1000).toLocaleTimeString(undefined, {
                           hour: "2-digit", minute: "2-digit",
@@ -529,7 +531,7 @@ function ScheduleCalendar() {
                   </div>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1 basis-[180px]">
                     <p className="text-xs font-medium truncate leading-snug" style={{ color: "#1c1917" }}>
                       {post.caption || post.transcript?.slice(0, 60) || post.clip_name}
                     </p>
@@ -544,7 +546,7 @@ function ScheduleCalendar() {
                     <span title={post.error_message} className="text-xs cursor-help" style={{ color: "#dc2626" }}>⚠</span>
                   )}
 
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div className="ml-auto flex gap-1 flex-shrink-0">
                     {editingId === post.id ? (
                       <>
                         <button
@@ -636,7 +638,7 @@ function PostingLogs() {
       className="rounded-xl overflow-hidden flex flex-col"
       style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
     >
-      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #e4e1da" }}>
+      <div className="flex items-center justify-between px-4 py-4 sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
         <div>
           <h2 className="text-sm font-semibold" style={{ color: "#1c1917" }}>Posting Logs</h2>
           <p className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>Recent activity</p>
@@ -691,7 +693,7 @@ function SchedulerPageInner() {
   const oauthError = searchParams.get("error");
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
+    <div className="flex w-full max-w-9xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: "#1c1917" }}>Scheduler</h1>
         <p className="text-sm mt-1" style={{ color: "#9e9b94" }}>
@@ -716,7 +718,7 @@ function SchedulerPageInner() {
         </div>
       )}
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1.8fr" }}>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.8fr]">
         <div className="flex flex-col gap-6">
           <AccountsPanel />
           <PostingLogs />

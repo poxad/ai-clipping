@@ -110,6 +110,16 @@ body {
   text-transform: uppercase;
 }
 
+.sidebar-shell {
+  width: min(84vw, 320px);
+}
+
+@media (min-width: 1024px) {
+  .sidebar-shell {
+    width: var(--sidebar-w);
+  }
+}
+
 /* ── Subtitle Template iPhone Mockup ───────────────────── */
 
 .video-frame {

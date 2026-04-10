@@ -42,7 +42,6 @@ def get_audio_duration(audio_path: str) -> float:
         [config.FFMPEG_BIN, "-i", audio_path],
         capture_output=True, text=True
     )
-    # ffmpeg prints duration to stderr even on "error" exit
     match = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.?\d*)", result.stderr)
     if not match:
         raise RuntimeError(f"Could not determine audio duration from: {audio_path}")
@@ -54,15 +53,12 @@ def transcribe(audio_path: str, language: Optional[str] = None, prompt: Optional
     """
     Transcribe audio using OpenAI Whisper API with word-level timestamps.
     Automatically chunks audio if it exceeds the 25MB API limit.
-
-    prompt: optional text to steer Whisper toward custom vocabulary / brand names.
     """
     client = OpenAI(api_key=config.OPENAI_API_KEY)
     file_size = os.path.getsize(audio_path)
     if not language:
         language = config.WHISPER_LANGUAGE
 
-    # Merge config-level prompt with any runtime-supplied extra terms
     base_prompt = config.WHISPER_PROMPT or ""
     extra_prompt = (prompt or "").strip()
     combined_prompt = (base_prompt.rstrip(".，, ") + ". " + extra_prompt).strip(". ") if extra_prompt else base_prompt
@@ -105,7 +101,6 @@ def _transcribe_chunked(client: OpenAI, audio_path: str, language: str, prompt: 
     while offset < total_duration:
         chunk_path = audio_path.replace(".mp3", f"_chunk{chunk_idx}.mp3")
         try:
-            # Extract chunk
             subprocess.run(
                 [
                     config.FFMPEG_BIN, "-y",

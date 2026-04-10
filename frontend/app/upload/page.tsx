@@ -168,7 +168,7 @@ export default function UploadPage() {
   const showClips = pollState.status === "done" && pollState.clips.length > 0;
 
   return (
-    <div className="flex flex-col gap-8 p-8 max-w-9xl w-full">
+    <div className="flex w-full max-w-9xl flex-col gap-6 p-4 sm:gap-8 sm:p-6 lg:p-8">
 
       {/* Page header */}
       {!jobId && (
@@ -185,11 +185,11 @@ export default function UploadPage() {
       {/* Step 1 — Content type */}
       {!jobId && (
         <div
-          className="rounded-2xl p-5"
+          className="rounded-2xl p-4 sm:p-5"
           style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
         >
           <SectionLabel step={1} title="What type of video is this?" desc="Helps the AI pick better clip boundaries and captions" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {([
               { key: "retail",  icon: Store, label: "Employee Generated Content",  desc: "Customer service, product demos, try-ons" },
               { key: "podcast", icon: Mic,   label: "Podcast / Talk",  desc: "Interviews, conversations, commentary" },
@@ -225,7 +225,7 @@ export default function UploadPage() {
       {/* Step 2 — Upload */}
       {!jobId && (
         <div
-          className="rounded-2xl p-5"
+          className="rounded-2xl p-4 sm:p-5"
           style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
         >
           <SectionLabel step={2} title="Upload your video" desc="Drop a raw recording — unedited is totally fine" />
@@ -233,7 +233,7 @@ export default function UploadPage() {
           {stagedFile ? (
             /* Staged file pill */
             <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+              className="flex flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center rounded-xl"
               style={{ background: "rgba(22,163,74,0.06)", border: "1.5px solid rgba(22,163,74,0.25)" }}
             >
               <div
@@ -323,7 +323,7 @@ export default function UploadPage() {
           className="rounded-2xl overflow-hidden"
           style={{ border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
         >
-          <div className="flex items-start gap-3 px-5 pt-5 pb-4">
+          <div className="flex items-start gap-3 px-4 pt-4 pb-4 sm:px-5 sm:pt-5">
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
               style={{ background: "linear-gradient(135deg, #6d28d9, #7c3aed)", color: "white" }}

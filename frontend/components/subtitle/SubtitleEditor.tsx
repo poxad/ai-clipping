@@ -427,7 +427,7 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
   }, [s]);
 
   return (
-    <div style={{ display: "flex", minHeight: 560 }}>
+    <div className="flex flex-col lg:flex-row" style={{ minHeight: 560 }}>
 
       {/* ── Left panel: controls ── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -639,11 +639,12 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
 
       {/* ── Right panel: phone preview ── */}
       <div
+        className="w-full border-t lg:w-auto lg:border-l lg:border-t-0"
         style={{
           width: 280,
           background: "#fafaf8",
           flexShrink: 0,
-          borderLeft: "1px solid #e4e1da",
+          borderColor: "#e4e1da",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",

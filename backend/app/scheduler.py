@@ -372,7 +372,7 @@ async def tiktok_auth_url():
 @router.get("/tiktok/callback")
 async def tiktok_callback(code: str = "", state: str = "", error: str = ""):
     if error:
-        return RedirectResponse(f"http://localhost:3000/scheduler?error={error}")
+        return RedirectResponse(f"{config.FRONTEND_URL}/scheduler?error={error}")
     if not code:
         raise HTTPException(400, "Missing authorization code")
     if state not in _oauth_states:
@@ -412,10 +412,10 @@ async def tiktok_callback(code: str = "", state: str = "", error: str = ""):
                 )
             con.commit()
 
-        return RedirectResponse("http://localhost:3000/scheduler?connected=1")
+        return RedirectResponse(f"{config.FRONTEND_URL}/scheduler?connected=1")
     except Exception as exc:
         print(f"[TIKTOK] OAuth callback error: {exc}")
-        return RedirectResponse(f"http://localhost:3000/scheduler?error=oauth_failed")
+        return RedirectResponse(f"{config.FRONTEND_URL}/scheduler?error=oauth_failed")
 
 
 @router.get("/tiktok/accounts")

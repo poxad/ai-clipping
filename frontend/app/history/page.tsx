@@ -8,9 +8,9 @@ export default function HistoryPage() {
   const { history } = useHistory();
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
+    <div className="flex w-full max-w-9xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "#1c1917", letterSpacing: "-0.02em" }}>
             Past Jobs
@@ -57,7 +57,7 @@ export default function HistoryPage() {
             <Link
               key={i}
               href={`/history/${entry.jobId}`}
-              className="flex items-center gap-4 rounded-2xl px-5 py-4 border cursor-pointer group transition-all duration-150"
+              className="flex items-center gap-4 rounded-2xl border px-4 py-4 cursor-pointer group transition-all duration-150 sm:px-5"
               style={{ borderColor: "#e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;

@@ -89,6 +89,7 @@ SUPABASE_UPLOADS_BUCKET: str = "uploads"
 TIKTOK_CLIENT_KEY: str = os.getenv("TIKTOK_CLIENT_KEY")
 TIKTOK_CLIENT_SECRET: str = os.getenv("TIKTOK_CLIENT_SECRET")
 TIKTOK_REDIRECT_URI: str = os.getenv("TIKTOK_REDIRECT_URI")
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # SQLite database for scheduler
 DB_PATH: str = os.getenv("DB_PATH", "scheduler.db")

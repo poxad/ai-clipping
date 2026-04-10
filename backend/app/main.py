@@ -29,7 +29,6 @@ from .jobstore import init_db, create_job, update_job as _store_update, get_job
 from .clipstore import upsert_clip, get_subtitle_words, save_subtitle_state
 from .storage import (
     upload_clip,
-    upload_raw,
     upload_private_artifact,
     download_private_artifact,
     download_public_clip,
@@ -383,6 +382,9 @@ async def _process_video(
                     message=f"Done! Generated {len(clips)} clips.", clips=clips)
     except Exception as exc:
         _update_job(job_id, status="error", progress=0, message=str(exc))
+    finally:
+        if os.path.exists(video_path):
+            os.remove(video_path)
 
 
 def _get_video_duration_sync(video_path: str) -> float:
@@ -580,6 +582,10 @@ async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Opti
 
     except Exception as exc:
         _update_job(job_id, status="error", progress=0, message=str(exc))
+    finally:
+        for vpath in video_paths:
+            if os.path.exists(vpath):
+                os.remove(vpath)
 
 
 # ---------------------------------------------------------------------------
@@ -618,11 +624,10 @@ async def upload_video(
     job_id = str(uuid.uuid4())
     original_filename = file.filename or f"{job_id}{ext}"
 
-    # Save upload
+    # Save upload to disk (fast, local I/O)
     upload_path = os.path.join(config.UPLOAD_DIR, f"{job_id}{ext}")
-    with open(upload_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    upload_raw(job_id, original_filename, upload_path)
+    with open(upload_path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
 
     create_job(job_id, status="uploading", progress=2,
                message="Saving uploaded video...", logs=["Saving uploaded video..."],

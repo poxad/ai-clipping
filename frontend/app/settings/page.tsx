@@ -56,7 +56,7 @@ export default function SettingsPage() {
     : "?";
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-2xl w-full">
+    <div className="flex w-full max-w-2xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
 
       {/* Page header */}
       <div>
@@ -134,7 +134,7 @@ export default function SettingsPage() {
           <div className="text-xs" style={{ color: "#9e9b94" }}>
             Helps the AI pick better clip boundaries and captions.
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-1">
+          <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {([
               { key: "retail",  icon: Store, label: "Employee Generated Content", desc: "Customer service, product demos, try-ons" },
               { key: "podcast", icon: Mic,   label: "Podcast / Talk",             desc: "Interviews, conversations, commentary" },
@@ -195,7 +195,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Save button */}
-        <div className="flex justify-end" style={{ borderTop: "1px solid #f0ede8", paddingTop: 16 }}>
+        <div className="flex justify-stretch sm:justify-end" style={{ borderTop: "1px solid #f0ede8", paddingTop: 16 }}>
           <button
             onClick={handleSave}
             disabled={saving}

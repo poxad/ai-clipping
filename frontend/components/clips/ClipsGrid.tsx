@@ -29,7 +29,7 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
     <div>
       {/* Header */}
       <div
-        className="flex items-start justify-between gap-4 mb-5 p-4 rounded-2xl"
+        className="mb-5 flex flex-col items-start justify-between gap-4 rounded-2xl p-4 sm:flex-row"
         style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
       >
         <div>
@@ -45,10 +45,10 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
             </span>
           </div>
           <p className="text-xs mt-1" style={{ color: "#9e9b94" }}>
-            Hover to preview · Click to fullscreen · Click the pencil to edit subtitles
+            Tap to preview · Tap again to fullscreen · Tap the pencil to edit subtitles
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
           {hasScores && (
             <button
               onClick={() => setSortByScore((v) => !v)}

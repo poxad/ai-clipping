@@ -123,7 +123,7 @@ export default function HistoryDetailPage() {
   // ── Still loading / polling ──
   if (entry === undefined) {
     return (
-      <div className="flex flex-col gap-6 p-8 max-w-5xl w-full">
+      <div className="flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <Link
           href="/history"
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium w-fit"
@@ -158,7 +158,7 @@ export default function HistoryDetailPage() {
   // ── Not found ──
   if (entry === null) {
     return (
-      <div className="flex flex-col gap-6 p-8 max-w-5xl w-full">
+      <div className="flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <Link
           href="/history"
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit"
@@ -179,8 +179,8 @@ export default function HistoryDetailPage() {
 
   // ── Found ──
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-9xl w-full">
-      <div className="flex items-start justify-between gap-4">
+    <div className="flex w-full max-w-9xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link

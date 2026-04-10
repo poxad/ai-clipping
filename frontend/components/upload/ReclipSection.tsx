@@ -77,21 +77,21 @@ export function ReclipSection({ history, currentStyle, onJobStart }: Props) {
           {singleJobs.map((entry) => (
             <div
               key={entry.jobId}
-              className="flex items-center justify-between px-3 py-2.5 rounded-lg"
+              className="flex flex-col items-start gap-3 px-3 py-2.5 rounded-lg sm:flex-row sm:items-center sm:justify-between"
               style={{ background: "#f7f6f3", border: "1px solid #e4e1da" }}
             >
-              <div>
+              <div className="min-w-0">
                 <span className="text-xs font-mono font-medium" style={{ color: "#1c1917" }}>
                   {entry.jobId.slice(0, 8)}…
                 </span>
-                <span className="text-xs ml-2" style={{ color: "#9e9b94" }}>
+                <span className="ml-0 block text-xs sm:ml-2 sm:inline" style={{ color: "#9e9b94" }}>
                   {entry.count} clip{entry.count !== 1 ? "s" : ""} · {entry.date}
                 </span>
               </div>
               <button
                 onClick={() => handleReclip(entry)}
                 disabled={loading === entry.jobId || !currentStyle}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                className="w-full rounded-lg px-3 py-2 text-xs font-semibold transition-all disabled:opacity-50 sm:w-auto"
                 style={{
                   background: "rgba(109,40,217,0.08)",
                   border: "1px solid rgba(109,40,217,0.25)",
