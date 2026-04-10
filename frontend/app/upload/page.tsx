@@ -45,6 +45,7 @@ export default function UploadPage() {
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [subtitleStyle, setSubtitleStyle] = useState<StylePayload | null>(null);
   const [showVocab, setShowVocab] = useState(false);
@@ -81,13 +82,15 @@ export default function UploadPage() {
     const style = buildStyle() ?? ({} as StylePayload);
     setError(null);
     setUploading(true);
+    setUploadPct(0);
     try {
-      const id = await uploadSingle(file, style);
+      const id = await uploadSingle(file, style, setUploadPct);
       startJob(id, style);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setUploading(false);
+      setUploadPct(0);
     }
   }
 
@@ -338,8 +341,8 @@ export default function UploadPage() {
       {showProgress && (
         <ProgressCard
           status={uploading ? "uploading" : pollState.status}
-          progress={uploading ? 2 : pollState.progress}
-          message={uploading ? "Uploading your video…" : pollState.message}
+          progress={uploading ? uploadPct : pollState.progress}
+          message={uploading ? `Uploading your video… ${uploadPct}%` : pollState.message}
           logs={pollState.logs}
         />
       )}

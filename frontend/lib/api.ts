@@ -62,14 +62,41 @@ export function styleToPayload(style: {
   };
 }
 
-export async function uploadSingle(file: File, style: StylePayload): Promise<string> {
+async function getAuthToken(): Promise<string | null> {
+  const { createClient } = await import("./supabase");
+  const sb = createClient();
+  const { data } = await sb.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
+export async function uploadSingle(
+  file: File,
+  style: StylePayload,
+  onProgress?: (pct: number) => void,
+): Promise<string> {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("style", JSON.stringify(style));
-  const res = await fetch(`${BASE}/api/upload`, { method: "POST", body: fd });
-  if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
-  const data = await res.json();
-  return data.job_id;
+  const token = await getAuthToken();
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BASE}/api/upload`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText).job_id);
+      } else {
+        reject(new Error(`Upload failed: ${xhr.statusText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed: network error"));
+    xhr.send(fd);
+  });
 }
 
 export async function uploadBatch(files: File[], style: StylePayload): Promise<string> {
