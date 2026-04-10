@@ -27,7 +27,7 @@ function ScoreBadge({ score }: { score: number }) {
 export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip: Clip; jobId: string; onSchedule?: (clip: Clip) => void; onEdit?: (clip: Clip) => void; urlSuffix?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const name = clipName(clip);
-  const url = videoUrl(jobId, name) + (urlSuffix ?? "");
+  const url = (clip.url?.startsWith("http") ? clip.url : videoUrl(jobId, name)) + (urlSuffix ?? "");
 
   const playPromise = useRef<Promise<void> | null>(null);
 
@@ -186,7 +186,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
           </button>
         )}
         <a
-          href={url}
+          href={clip.url?.startsWith("http") ? clip.url : url}
           download={`clip_${String(clip.index).padStart(3, "0")}.mp4`}
           onClick={(e) => e.stopPropagation()}
           className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
