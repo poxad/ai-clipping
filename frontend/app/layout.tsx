@@ -49,6 +49,11 @@ const anton = Anton({
 export const metadata: Metadata = {
   title: "Jumo | Professional AI Video Clipping Workspace",
   description: "Upload source videos, generate short clips, refine subtitles, review history, and manage TikTok scheduling from one workspace.",
+  icons: {
+    icon: "/jumo-logo.jpeg",
+    shortcut: "/jumo-logo.jpeg",
+    apple: "/jumo-logo.jpeg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
