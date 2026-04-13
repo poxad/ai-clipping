@@ -226,7 +226,11 @@ async def _post_clip_to_tiktok(post_id: str):
     try:
         clip_path = row["clip_path"]
         if not os.path.exists(clip_path):
-            raise FileNotFoundError(f"Clip file not found: {clip_path}")
+            # Try to restore from Supabase Storage (Railway ephemeral filesystem)
+            from .storage import download_public_clip
+            restored = download_public_clip(row["job_id"], row["clip_name"], clip_path)
+            if not restored or not os.path.exists(clip_path):
+                raise FileNotFoundError(f"Clip file not found locally or in storage: {row['clip_name']}")
 
         video_size = os.path.getsize(clip_path)
         access_token = row["access_token"]
@@ -456,8 +460,6 @@ async def create_schedule(req: ScheduleRequest):
 
     # Build clip path from job outputs dir
     clip_path = os.path.join(config.OUTPUT_DIR, req.job_id, req.clip_name)
-    if not os.path.exists(clip_path):
-        raise HTTPException(404, f"Clip file not found: {req.clip_name}")
 
     post_id = str(uuid.uuid4())
     with get_db() as con:

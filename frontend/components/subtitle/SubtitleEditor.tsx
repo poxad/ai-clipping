@@ -427,10 +427,10 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
   }, [s]);
 
   return (
-    <div className="flex flex-col lg:flex-row" style={{ minHeight: 560 }}>
+    <div className="flex flex-col xl:flex-row xl:min-h-[560px]">
 
       {/* ── Left panel: controls ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="min-w-0" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Template gallery */}
         <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #e4e1da", background: "#fafaf8" }}>
@@ -488,7 +488,7 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 p-2" style={{ borderBottom: "1px solid #e4e1da", background: "#fafaf8" }}>
+        <div className="no-scrollbar flex gap-1 overflow-x-auto p-2" style={{ borderBottom: "1px solid #e4e1da", background: "#fafaf8" }}>
           <Tab active={tab === "font"}     onClick={() => setTab("font")}     icon={Type}        label="Font"     />
           <Tab active={tab === "style"}    onClick={() => setTab("style")}    icon={Palette}     label="Style"    />
           <Tab active={tab === "position"} onClick={() => setTab("position")} icon={AlignCenter} label="Position" />
@@ -639,9 +639,10 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
 
       {/* ── Right panel: phone preview ── */}
       <div
-        className="w-full border-t lg:w-auto lg:border-l lg:border-t-0"
+        className="w-full border-t xl:w-auto xl:border-l xl:border-t-0"
         style={{
-          width: 280,
+          width: "100%",
+          maxWidth: 280,
           background: "#fafaf8",
           flexShrink: 0,
           borderColor: "#e4e1da",
@@ -649,6 +650,7 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
           flexDirection: "column",
           alignItems: "center",
           padding: "20px 16px 16px",
+          alignSelf: "center",
           gap: 14,
         }}
       >
