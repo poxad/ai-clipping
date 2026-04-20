@@ -1,0 +1,9 @@
+[mcp_servers.supabase]
+  command = "npx"
+  args = [
+    "-y",
+    "@supabase/mcp-server-supabase",
+    "--project-ref", "lpumljxyokdevpvlqgsy",
+    "--access-token",
+  "sbp_8039f53f369bc377ed97e86731af791d9fa0bdc7"
+  ]

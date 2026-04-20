@@ -15,13 +15,18 @@ import {
 
 const FONT_CSS: Record<string, string> = {
   "Poppins":     "var(--font-poppins)",
-  "Montserrat":  "var(--font-montserrat)",
   "Inter":       "var(--font-inter)",
+  "Montserrat":  "var(--font-montserrat)",
   "Roboto":      "var(--font-roboto)",
+  "Geist Sans":  "var(--font-geist-sans)",
+  "Geist Mono":  "var(--font-geist-mono)",
   "Arial":       "Arial, sans-serif",
-  "Impact":      "Impact, fantasy",
+  "Helvetica":   "Helvetica, Arial, sans-serif",
+  "Georgia":     "Georgia, serif",
+  "Courier New": "\"Courier New\", monospace",
   "Bebas Neue":  "var(--font-bebas-neue)",
   "Anton":       "var(--font-anton)",
+  "Impact":      "Impact, fantasy",
 };
 
 // ---------------------------------------------------------------------------
@@ -86,19 +91,19 @@ function reducer(s: SubtitleStyle, a: Action): SubtitleStyle { return { ...s, [a
 // ---------------------------------------------------------------------------
 
 const TEMPLATES: { label: string; s: Partial<SubtitleStyle> }[] = [
-  { label: "Clean White",   s: { textColor: "#ffffff", hasOutline: false, hasShadow: true,  shadowSize: 2, hasBg: false, bold: true, font: "Poppins" } },
-  { label: "Black Outline", s: { textColor: "#ffffff", hasOutline: true,  outlineWidth: 4, hasShadow: false, hasBg: false, bold: true, font: "Montserrat" } },
+  { label: "Paper Clean",   s: { textColor: "#ffffff", hasOutline: false, hasShadow: true, shadowSize: 4, hasBg: false, bold: true, font: "Poppins" } },
+  { label: "Ink Outline",   s: { textColor: "#ffffff", hasOutline: true, outlineWidth: 4, hasShadow: false, hasBg: false, bold: true, font: "Montserrat" } },
   { label: "Yellow Bold",   s: { textColor: "#ffe600", hasOutline: true,  outlineWidth: 3, outlineColor: "#000000", hasShadow: false, hasBg: false, bold: true, font: "Impact" } },
   { label: "Dark Box",      s: { textColor: "#ffffff", hasOutline: false, hasShadow: false, hasBg: true, bgColor: "#000000", bgOpacity: 65, bold: true, font: "Poppins" } },
-  { label: "Neon Green",    s: { textColor: "#00ff88", hasOutline: false, hasShadow: true,  shadowSize: 3, shadowColor: "#004422", hasBg: false, bold: true, font: "Anton" } },
-  { label: "Cinematic",     s: { textColor: "#f5f0e0", hasOutline: false, hasShadow: true,  shadowSize: 4, shadowColor: "#000000", hasBg: true, bgColor: "#000000", bgOpacity: 35, bold: false, italic: false, font: "Montserrat" } },
+  { label: "Terracotta",    s: { textColor: "#f7f1e7", hasOutline: false, hasShadow: true, shadowSize: 3, shadowColor: "#3d281f", hasBg: true, bgColor: "#b85430", bgOpacity: 70, bold: true, font: "Poppins" } },
+  { label: "Caption Mono",  s: { textColor: "#f5f0e0", hasOutline: false, hasShadow: true, shadowSize: 3, shadowColor: "#000000", hasBg: true, bgColor: "#000000", bgOpacity: 35, bold: false, italic: false, font: "Geist Mono" } },
 ];
 
 // ---------------------------------------------------------------------------
 // Fonts
 // ---------------------------------------------------------------------------
 
-const FONTS = ["Poppins", "Montserrat", "Inter", "Roboto", "Arial", "Impact", "Bebas Neue", "Anton"];
+const FONTS = ["Poppins", "Inter", "Montserrat", "Roboto", "Geist Sans", "Geist Mono", "Arial", "Helvetica", "Georgia", "Courier New", "Bebas Neue", "Anton", "Impact"];
 
 // ---------------------------------------------------------------------------
 // Preview component
@@ -141,7 +146,7 @@ function Preview({ style }: { style: SubtitleStyle }) {
 
   return (
     <div style={{ width: 243, height: FRAME_H, position: "relative", overflow: "hidden", borderRadius: 8, flexShrink: 0 }}>
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, #1a1a2e, #16213e, #0f3460)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "#2a2521" }} />
       {/* TikTok chrome */}
       <span style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.3)", zIndex: 5 }}>9:16</span>
       <div style={{ position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none" }}>
@@ -245,9 +250,9 @@ function MiniTemplateCard({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        border: `2px solid ${isSelected ? "#6d28d9" : "rgba(255,255,255,0.1)"}`,
+        border: `2px solid ${isSelected ? "#b85430" : "rgba(255,255,255,0.1)"}`,
         boxShadow: isSelected
-          ? "0 0 0 3px rgba(109,40,217,0.35)"
+          ? "0 0 0 3px rgba(184,84,48,0.25)"
           : "0 2px 8px rgba(0,0,0,0.4)",
         position: "relative",
         transition: "all 0.15s ease",
@@ -280,7 +285,7 @@ function MiniTemplateCard({
       <span style={{
         fontSize: 10,
         fontWeight: isSelected ? 700 : 500,
-        color: isSelected ? "#6d28d9" : "#9e9b94",
+        color: isSelected ? "#b85430" : "#83786c",
         textAlign: "center",
         maxWidth: 78 + 4,
         overflow: "hidden",
@@ -305,7 +310,7 @@ function Tab({ active, onClick, icon: Icon, label }: { active: boolean; onClick:
       className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all flex-1"
       style={{
         background: active ? "#ffffff" : "transparent",
-        color: active ? "#6d28d9" : "#9e9b94",
+        color: active ? "#b85430" : "#83786c",
         boxShadow: active ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
         border: active ? "1px solid #e4e1da" : "1px solid transparent",
       }}
@@ -364,9 +369,9 @@ function Toggle({ on, onChange, children }: { on: boolean; onChange: (v: boolean
       onClick={() => onChange(!on)}
       className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
       style={{
-        background: on ? "rgba(109,40,217,0.1)" : "#f7f6f3",
-        color: on ? "#6d28d9" : "#9e9b94",
-        border: `1px solid ${on ? "rgba(109,40,217,0.3)" : "#e4e1da"}`,
+        background: on ? "rgba(184,84,48,0.1)" : "#f7f1e7",
+        color: on ? "#b85430" : "#83786c",
+        border: `1px solid ${on ? "rgba(184,84,48,0.3)" : "#d7cebf"}`,
       }}
     >
       {children}
@@ -472,9 +477,9 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
                     fontSize: 13,
                     fontFamily: FONT_CSS[font] || `"${font}", sans-serif`,
                     fontWeight: 600,
-                    background: isActive ? "rgba(109,40,217,0.1)" : "#f0ede8",
-                    color: isActive ? "#6d28d9" : "#706d67",
-                    border: `1.5px solid ${isActive ? "rgba(109,40,217,0.4)" : "#e4e1da"}`,
+                    background: isActive ? "rgba(184,84,48,0.1)" : "#f0e7d8",
+                    color: isActive ? "#b85430" : "#5e554d",
+                    border: `1.5px solid ${isActive ? "rgba(184,84,48,0.35)" : "#d7cebf"}`,
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                     whiteSpace: "nowrap",
@@ -522,7 +527,7 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
                       className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
                       style={{
                         background: s.textCase === c ? "rgba(109,40,217,0.1)" : "#f7f6f3",
-                        color: s.textCase === c ? "#6d28d9" : "#9e9b94",
+                        color: s.textCase === c ? "#b85430" : "#83786c",
                         border: `1px solid ${s.textCase === c ? "rgba(109,40,217,0.3)" : "#e4e1da"}`,
                       }}
                     >
@@ -541,7 +546,7 @@ export function SubtitleEditor({ onStyleChange }: { onStyleChange: (p: StylePayl
                       className="p-1.5 rounded-lg transition-all"
                       style={{
                         background: s.alignment === a ? "rgba(109,40,217,0.1)" : "#f7f6f3",
-                        color: s.alignment === a ? "#6d28d9" : "#9e9b94",
+                        color: s.alignment === a ? "#b85430" : "#83786c",
                         border: `1px solid ${s.alignment === a ? "rgba(109,40,217,0.3)" : "#e4e1da"}`,
                       }}
                     >

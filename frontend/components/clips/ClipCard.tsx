@@ -82,9 +82,9 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
     <div
       className="rounded-xl overflow-hidden flex flex-col transition-all cursor-pointer group"
       style={{
-        background: "#ffffff",
-        border: "1px solid #e4e1da",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        background: "#fbf7f1",
+        border: "1px solid #d7cebf",
+        boxShadow: "none",
       }}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
@@ -123,7 +123,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
             {clip.clip_type && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: "rgba(109,40,217,0.08)", color: "#6d28d9", border: "1px solid rgba(109,40,217,0.2)" }}
+                style={{ background: "rgba(184,84,48,0.08)", color: "#b85430", border: "1px solid rgba(184,84,48,0.2)" }}
               >
                 {clip.clip_type}
               </span>
@@ -132,7 +132,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
         )}
 
         {clip.caption && (
-          <p className="text-xs leading-relaxed font-medium" style={{ color: "#1c1917" }}>
+          <p className="text-xs leading-relaxed font-medium" style={{ color: "#171412" }}>
             {clip.caption}
           </p>
         )}
@@ -144,7 +144,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
           <button
             onClick={(e) => { e.stopPropagation(); onSchedule(clip); }}
             className="flex items-center justify-center gap-1 flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
-            style={{ background: "rgba(109,40,217,0.08)", color: "#6d28d9", border: "1px solid rgba(109,40,217,0.2)" }}
+            style={{ background: "rgba(184,84,48,0.08)", color: "#b85430", border: "1px solid rgba(184,84,48,0.2)" }}
           >
             <CalendarPlus className="w-3 h-3" /> Schedule
           </button>
@@ -153,7 +153,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(clip); }}
             className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all"
-            style={{ background: "#f7f6f3", color: "#706d67", border: "1px solid #e4e1da" }}
+            style={{ background: "#f7f1e7", color: "#5e554d", border: "1px solid #d7cebf" }}
             title="Edit subtitles"
           >
             <Pencil className="w-3 h-3" />
@@ -164,7 +164,7 @@ export function ClipCard({ clip, jobId, onSchedule, onEdit, urlSuffix }: { clip:
           download={`clip_${String(clip.index).padStart(3, "0")}.mp4`}
           onClick={(e) => e.stopPropagation()}
           className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
-          style={{ background: "#f7f6f3", color: "#706d67", border: "1px solid #e4e1da" }}
+          style={{ background: "#f7f1e7", color: "#5e554d", border: "1px solid #d7cebf" }}
         >
           <Download className="w-3 h-3" />
         </a>

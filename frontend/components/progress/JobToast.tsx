@@ -20,9 +20,9 @@ export function JobToast() {
     <div
       className="group fixed bottom-5 right-5 z-50 flex flex-col gap-1.5 rounded-2xl px-4 py-3 cursor-pointer transition-all"
       style={{
-        background: "#ffffff",
+        background: "#fbf7f1",
         border: `1px solid ${isError ? "rgba(220,38,38,0.25)" : isDone ? "rgba(22,163,74,0.25)" : "#e4e1da"}`,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+        boxShadow: "0 18px 36px rgba(23,20,18,0.12)",
         minWidth: 260,
         maxWidth: 320,
       }}
@@ -30,42 +30,42 @@ export function JobToast() {
     >
       <button
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0.5 hover:bg-black/10"
-        style={{ color: "#9e9b94" }}
+        style={{ color: "#83786c" }}
         onClick={(e) => { e.stopPropagation(); reset(); }}
         aria-label="Dismiss"
       >
         <X className="w-3.5 h-3.5" />
       </button>
       <div className="flex items-center gap-2.5">
-        {isActive && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "#6d28d9" }} />}
+        {isActive && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" style={{ color: "#b85430" }} />}
         {isDone && <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#16a34a" }} />}
         {isError && <XCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#dc2626" }} />}
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold truncate" style={{ color: "#1c1917" }}>
+          <div className="text-xs font-semibold truncate" style={{ color: "#171412" }}>
             {isDone ? "Clips ready!" : isError ? "Processing failed" : "Processing video…"}
           </div>
           {message && (
-            <div className="text-xs truncate mt-0.5" style={{ color: "#9e9b94" }}>
+            <div className="text-xs truncate mt-0.5" style={{ color: "#83786c" }}>
               {message}
             </div>
           )}
         </div>
-        <span className="text-xs font-bold tabular-nums flex-shrink-0" style={{ color: isDone ? "#16a34a" : isError ? "#dc2626" : "#6d28d9" }}>
+        <span className="text-xs font-bold tabular-nums flex-shrink-0" style={{ color: isDone ? "#16a34a" : isError ? "#dc2626" : "#b85430" }}>
           {progress}%
         </span>
       </div>
 
       {isActive && (
-        <div className="rounded-full overflow-hidden" style={{ height: 3, background: "#f0ede8" }}>
+        <div className="rounded-full overflow-hidden" style={{ height: 3, background: "#f0e7d8" }}>
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${progress}%`, background: "linear-gradient(90deg, #6d28d9, #7c3aed)" }}
+            style={{ width: `${progress}%`, background: "#171412" }}
           />
         </div>
       )}
 
       {(isDone || isError) && (
-        <div className="text-xs" style={{ color: "#9e9b94" }}>
+        <div className="text-xs" style={{ color: "#83786c" }}>
           {isDone ? "Click to view clips →" : "Click to see details →"}
         </div>
       )}

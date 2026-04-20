@@ -31,7 +31,7 @@ export function styleToPayload(style: {
   bgColor?: string;
   bgOpacity?: number;
   marginV: number;
-  contentType?: "retail" | "podcast";
+  contentType?: "retail" | "podcast" | "general";
   whisperVocab?: string;
 }): StylePayload {
   return {

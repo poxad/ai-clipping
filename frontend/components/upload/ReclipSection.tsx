@@ -37,18 +37,18 @@ export function ReclipSection({ history, currentStyle, onJobStart }: Props) {
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+      style={{ border: "1px solid #d7cebf", background: "#fbf7f1" }}
     >
       <button
         className="w-full flex items-center justify-between px-4 py-3 text-left"
         onClick={() => setCollapsed((v) => !v)}
       >
-        <span className="text-sm font-medium" style={{ color: "#706d67" }}>
+        <span className="text-sm font-medium" style={{ color: "#5e554d" }}>
           ♻ Re-clip a recent video
         </span>
         <span
           style={{
-            color: "#9e9b94",
+            color: "#83786c",
             fontSize: 10,
             transform: collapsed ? "rotate(-90deg)" : "none",
             transition: "transform 0.15s",
@@ -60,8 +60,8 @@ export function ReclipSection({ history, currentStyle, onJobStart }: Props) {
       </button>
 
       {!collapsed && (
-        <div className="px-4 pb-4 flex flex-col gap-2" style={{ borderTop: "1px solid #f0ede8" }}>
-          <p className="text-xs pt-3" style={{ color: "#9e9b94" }}>
+        <div className="px-4 pb-4 flex flex-col gap-2" style={{ borderTop: "1px solid #f0e7d8" }}>
+          <p className="text-xs pt-3" style={{ color: "#83786c" }}>
             Re-run clipping on a previous upload using current subtitle settings. Skips transcription.
           </p>
 
@@ -78,13 +78,13 @@ export function ReclipSection({ history, currentStyle, onJobStart }: Props) {
             <div
               key={entry.jobId}
               className="flex flex-col items-start gap-3 px-3 py-2.5 rounded-lg sm:flex-row sm:items-center sm:justify-between"
-              style={{ background: "#f7f6f3", border: "1px solid #e4e1da" }}
+              style={{ background: "#f7f1e7", border: "1px solid #d7cebf" }}
             >
               <div className="min-w-0">
-                <span className="text-xs font-mono font-medium" style={{ color: "#1c1917" }}>
+                <span className="text-xs font-mono font-medium" style={{ color: "#171412" }}>
                   {entry.jobId.slice(0, 8)}…
                 </span>
-                <span className="ml-0 block text-xs sm:ml-2 sm:inline" style={{ color: "#9e9b94" }}>
+                <span className="ml-0 block text-xs sm:ml-2 sm:inline" style={{ color: "#83786c" }}>
                   {entry.count} clip{entry.count !== 1 ? "s" : ""} · {entry.date}
                 </span>
               </div>
@@ -93,9 +93,9 @@ export function ReclipSection({ history, currentStyle, onJobStart }: Props) {
                 disabled={loading === entry.jobId || !currentStyle}
                 className="w-full rounded-lg px-3 py-2 text-xs font-semibold transition-all disabled:opacity-50 sm:w-auto"
                 style={{
-                  background: "rgba(109,40,217,0.08)",
-                  border: "1px solid rgba(109,40,217,0.25)",
-                  color: "#6d28d9",
+                  background: "rgba(184,84,48,0.08)",
+                  border: "1px solid rgba(184,84,48,0.2)",
+                  color: "#b85430",
                 }}
               >
                 {loading === entry.jobId ? "Starting…" : "Re-clip"}

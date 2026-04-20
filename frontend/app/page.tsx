@@ -1,94 +1,158 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Captions, Scissors, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  Captions,
+  CheckCircle2,
+  Clock3,
+  Mic,
+  Scissors,
+  ShieldCheck,
+  Sparkles,
+  Store,
+} from "lucide-react";
 
-const features = [
+const quickFacts = [
+  { value: "3", label: "Content modes", detail: "retail, podcast, and general footage" },
+  { value: "9:16", label: "Final output", detail: "vertical clips built for short-form publishing" },
+  { value: "1", label: "Workspace", detail: "upload, review, subtitle editing, history, scheduling" },
+];
+
+const valueCards = [
   {
-    title: "Structured clipping workflow",
-    body: "Upload one source recording and turn it into multiple reviewable short clips with a clear processing trail.",
+    icon: ShieldCheck,
+    title: "Reviewable by design",
+    body: "Every clip arrives with transcript context, score metadata, and a calmer interface for checking what the model actually chose.",
   },
   {
-    title: "Editable subtitle styling",
-    body: "Apply reusable subtitle presets, adjust presentation details, and refine clip outputs before publishing.",
+    icon: Captions,
+    title: "Subtitle controls that stay readable",
+    body: "Edit timing, text, font, outline, and layout without leaving the product or wrestling with a noisy motion-graphics UI.",
   },
   {
-    title: "TikTok scheduling support",
-    body: "Connect test accounts, review publish states, and manage scheduled posts from one workspace.",
+    icon: CalendarDays,
+    title: "From generation to scheduling",
+    body: "Keep clipping, history, and TikTok scheduling in one place so publish-ready assets do not get scattered across tools.",
   },
 ];
 
-const trustItems = [
-  "Purpose-built workflow for short-form retail and talk-based content",
-  "Review, scoring, history, and scheduling in one authenticated product",
-  "Designed as an operational tool rather than a one-off AI demo",
+const workflow = [
+  {
+    numeral: "I",
+    title: "Upload the raw recording",
+    body: "Bring in store footage, podcasts, or general video. No pre-editing needed.",
+  },
+  {
+    numeral: "II",
+    title: "Generate candidate clips",
+    body: "Jumo Clip transcribes the video, identifies strong moments, and builds vertical short-form outputs.",
+  },
+  {
+    numeral: "III",
+    title: "Refine and publish",
+    body: "Adjust subtitles, review history, and move the selected clips into a scheduling workflow.",
+  },
+];
+
+const useCases = [
+  {
+    icon: Store,
+    title: "Retail and service footage",
+    body: "Capture try-ons, consultations, product walkthroughs, and staff-customer moments without hand-cutting every clip.",
+  },
+  {
+    icon: Mic,
+    title: "Podcast and interview clips",
+    body: "Turn longer conversations into portrait segments with subtitle styling and active-speaker reframing.",
+  },
+  {
+    icon: Sparkles,
+    title: "General short-form discovery",
+    body: "Use the broader clip mode when the footage does not fit a single template and you still want strong highlight candidates.",
+  },
+];
+
+const featureGrid = [
+  "Word-level transcription cached for re-clipping",
+  "Per-clip subtitle editing and style presets",
+  "History view for generated jobs and outputs",
+  "Portrait reframing for landscape source footage",
+  "Caption metadata stored alongside clip records",
+  "Integrated scheduling flow for downstream posting",
 ];
 
 export default function LandingPage() {
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        width: "100%",
-        color: "#17242c",
-        background:
-          "radial-gradient(circle at top left, rgba(185,135,82,0.16), transparent 26%), radial-gradient(circle at 85% 10%, rgba(25,78,86,0.1), transparent 24%), linear-gradient(180deg, #fbf8f2 0%, #f4f0e8 100%)",
-      }}
-    >
+    <div style={{ minHeight: "100vh", width: "100%", background: "#f3ede3", color: "#171412" }}>
       <nav
         style={{
           position: "sticky",
           top: 0,
           zIndex: 50,
           backdropFilter: "blur(18px)",
-          background: "rgba(251,248,242,0.84)",
-          borderBottom: "1px solid rgba(221,212,197,0.9)",
+          background: "rgba(247,241,231,0.94)",
+          borderBottom: "1px solid #d7cebf",
         }}
       >
         <div
           style={{
             maxWidth: 1180,
             margin: "0 auto",
-            padding: "18px 28px",
+            padding: "18px 24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 20,
+            flexWrap: "wrap",
           }}
         >
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "inherit" }}>
             <div
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 12,
-                background: "linear-gradient(135deg, #194e56, #2b6670)",
+                background: "#171412",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 12px 28px rgba(25,78,86,0.2)",
               }}
             >
-              <Scissors size={17} color="#fff" />
+              <Scissors size={16} color="#f7f1e7" />
             </div>
             <div>
-              <div className="font-brand" style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.05em", color: "#17242c" }}>Jumo</div>
-              <div className="eyebrow" style={{ color: "#8c9186" }}>
-                clipping platform
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.03em" }}>Jumo Clip</div>
+              <div className="eyebrow" style={{ fontSize: 10 }}>Clipping workspace</div>
             </div>
           </Link>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+            <a href="#workflow" style={{ fontSize: 13, fontWeight: 600, color: "#5e554d", textDecoration: "none" }}>
+              Workflow
+            </a>
+            <a href="#features" style={{ fontSize: 13, fontWeight: 600, color: "#5e554d", textDecoration: "none" }}>
+              Features
+            </a>
+            <a href="#use-cases" style={{ fontSize: 13, fontWeight: 600, color: "#5e554d", textDecoration: "none" }}>
+              Use cases
+            </a>
+            <a href="#faq" style={{ fontSize: 13, fontWeight: 600, color: "#5e554d", textDecoration: "none" }}>
+              Why Jumo
+            </a>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <Link
               href="/login"
               style={{
-                padding: "10px 16px",
+                padding: "10px 14px",
                 borderRadius: 999,
                 fontSize: 13,
-                fontWeight: 700,
-                color: "#5f6a6d",
+                fontWeight: 600,
+                color: "#171412",
                 textDecoration: "none",
-                border: "1px solid #ddd4c5",
-                background: "rgba(255,253,248,0.8)",
+                border: "1px solid #d7cebf",
+                background: "#fbf7f1",
               }}
             >
               Log in
@@ -96,319 +160,330 @@ export default function LandingPage() {
             <Link
               href="/upload"
               style={{
-                padding: "10px 18px",
+                padding: "10px 16px",
                 borderRadius: 999,
                 fontSize: 13,
                 fontWeight: 700,
-                color: "#ffffff",
+                color: "#f7f1e7",
                 textDecoration: "none",
-                background: "linear-gradient(135deg, #194e56, #215c64)",
-                boxShadow: "0 14px 30px rgba(25,78,86,0.18)",
+                background: "#171412",
               }}
             >
-              Open Dashboard
+              Open Workspace
             </Link>
           </div>
         </div>
       </nav>
 
-      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "88px 28px 54px" }}>
-        <div
-          className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]"
-          style={{
-            gap: 28,
-            alignItems: "stretch",
-          }}
+      <main style={{ maxWidth: 1180, margin: "0 auto", padding: "44px 24px 0" }}>
+        <section
+          className="grid gap-6 lg:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.82fr)]"
+          style={{ alignItems: "stretch" }}
         >
-          <div
-            style={{
-              padding: "40px 42px",
-              borderRadius: 32,
-              background: "rgba(255,253,248,0.78)",
-              border: "1px solid rgba(221,212,197,0.9)",
-              boxShadow: "0 28px 80px rgba(23,36,44,0.08)",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 14px",
-                borderRadius: 999,
-                background: "rgba(25,78,86,0.08)",
-                border: "1px solid rgba(25,78,86,0.12)",
-                color: "#194e56",
-                fontSize: 12,
-                fontWeight: 700,
-                marginBottom: 24,
-                letterSpacing: "0.02em",
-              }}
-            >
-              <ShieldCheck size={14} />
-              Professional clipping workflow for review-ready short-form content
-            </div>
-
+          <div className="panel" style={{ padding: "34px 32px" }}>
+            <div className="eyebrow">Editorial Workshop</div>
             <h1
-              className="font-display"
+              className="editorial-title"
               style={{
-                fontSize: "clamp(44px, 6vw, 72px)",
-                lineHeight: 0.94,
-                letterSpacing: "-0.075em",
-                fontWeight: 800,
-                maxWidth: 760,
+                fontSize: "clamp(2.4rem, 4.5vw, 4.35rem)",
+                marginTop: 12,
+                maxWidth: 780,
               }}
             >
-              A cleaner way to turn source videos into publishable clips.
+              Turn long footage into calmer, publish-ready short-form clips.
             </h1>
-
-            <p
-              style={{
-                fontSize: 17,
-                lineHeight: 1.85,
-                color: "#5f6a6d",
-                maxWidth: 620,
-                marginTop: 22,
-              }}
-            >
-              Jumo combines transcription, AI-assisted clip selection, subtitle styling, review history, and TikTok scheduling into a single workspace built for operational content teams.
+            <p style={{ fontSize: 16, lineHeight: 1.85, color: "#5e554d", marginTop: 18, maxWidth: 680 }}>
+              Jumo Clip brings upload, clipping, subtitle refinement, history, and scheduling into one paper-native workspace. It is built for teams who want deliberate review, not noisy “viral growth” dashboards.
             </p>
 
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 30 }}>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 28 }}>
               <Link
                 href="/upload"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
-                  padding: "14px 22px",
+                  padding: "13px 18px",
                   borderRadius: 999,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 700,
-                  letterSpacing: "-0.01em",
-                  background: "linear-gradient(135deg, #194e56, #215c64)",
-                  color: "#fff",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  background: "#171412",
+                  color: "#f7f1e7",
                   textDecoration: "none",
-                  boxShadow: "0 18px 38px rgba(25,78,86,0.2)",
                 }}
               >
-                Launch Workspace <ArrowRight size={16} />
+                Start clipping <ArrowRight size={15} />
               </Link>
-              <Link
+              {/* <Link
                 href="/guide"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
-                  padding: "14px 22px",
+                  padding: "13px 18px",
                   borderRadius: 999,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  letterSpacing: "-0.01em",
-                  background: "rgba(255,253,248,0.9)",
-                  color: "#17242c",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#171412",
                   textDecoration: "none",
-                  border: "1px solid #ddd4c5",
+                  border: "1px solid #d7cebf",
+                  background: "#fbf7f1",
                 }}
               >
-                View Scoring Guide
-              </Link>
+                Read the guide
+              </Link> */}
             </div>
 
-            <div
-              className="grid sm:grid-cols-3"
-              style={{
-                marginTop: 34,
-                gap: 14,
-              }}
-            >
-              {[
-                { value: "1", label: "workspace", detail: "for upload, review, history, and scheduling" },
-                { value: "AI", label: "assisted", detail: "clip selection with human review still in control" },
-                { value: "9:16", label: "output", detail: "vertical short-form delivery with styled subtitles" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    padding: "16px 18px",
-                    borderRadius: 22,
-                    background: "rgba(244,240,232,0.72)",
-                    border: "1px solid rgba(221,212,197,0.84)",
-                  }}
-                >
-                  <div className="font-display" style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.06em", color: "#194e56" }}>{item.value}</div>
-                  <div className="eyebrow" style={{ color: "#17242c", marginTop: 6, letterSpacing: "0.1em" }}>
-                    {item.label}
-                  </div>
-                  <div style={{ fontSize: 12, lineHeight: 1.6, color: "#8c9186", marginTop: 6 }}>{item.detail}</div>
+            <div className="grid gap-3 sm:grid-cols-3" style={{ marginTop: 30 }}>
+              {quickFacts.map((item) => (
+                <div key={item.label} className="panel-muted" style={{ padding: "16px 18px" }}>
+                  <div className="font-mono" style={{ fontSize: 20, fontWeight: 700, color: "#b85430" }}>{item.value}</div>
+                  <div className="eyebrow" style={{ marginTop: 6 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.6, color: "#83786c", marginTop: 6 }}>{item.detail}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div
-            style={{
-              borderRadius: 32,
-              padding: 24,
-              background: "linear-gradient(180deg, rgba(25,78,86,0.95), rgba(20,55,61,0.98))",
-              color: "#f6f2ea",
-              boxShadow: "0 28px 80px rgba(15,38,43,0.18)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                width: 260,
-                height: 260,
-                borderRadius: "50%",
-                background: "rgba(185,135,82,0.18)",
-                top: -120,
-                right: -70,
-                filter: "blur(10px)",
-              }}
-            />
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-                <div>
-                  <div className="eyebrow" style={{ color: "rgba(246,242,234,0.7)" }}>
-                    Product snapshot
-                  </div>
-                  <div className="font-display" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.05em", marginTop: 6 }}>
-                    Built for real operational use
-                  </div>
-                </div>
-                <Sparkles size={18} color="#d7b28a" />
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 24,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  padding: 18,
-                }}
-              >
-                {[
-                  { icon: Scissors, title: "Clipping", body: "AI-assisted selection of short moments from longer recordings." },
-                  { icon: Captions, title: "Subtitles", body: "Preset-based styling with editable presentation controls." },
-                  { icon: CalendarDays, title: "Scheduling", body: "Connected TikTok account management and scheduled posting states." },
-                ].map(({ icon: Icon, title, body }) => (
+          <div className="panel" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
+            <div className="eyebrow">Why teams use it</div>
+            {valueCards.map(({ icon: Icon, title, body }) => (
+              <div key={title} style={{ paddingBottom: 16, borderBottom: "1px solid #f0e7d8" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div
-                    key={title}
                     style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 12,
+                      background: "rgba(184,84,48,0.08)",
+                      color: "#b85430",
                       display: "flex",
-                      gap: 14,
-                      padding: "14px 0",
-                      borderBottom: title === "Scheduling" ? "none" : "1px solid rgba(255,255,255,0.09)",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <div
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 14,
-                        background: "rgba(255,255,255,0.1)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Icon size={16} color="#f6f2ea" />
-                    </div>
-                    <div>
-                      <div className="font-display" style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.02em" }}>{title}</div>
-                      <div style={{ fontSize: 13, lineHeight: 1.75, color: "rgba(246,242,234,0.7)", marginTop: 4 }}>{body}</div>
-                    </div>
+                    <Icon size={16} />
                   </div>
-                ))}
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{title}</div>
+                </div>
+                <p style={{ marginTop: 10, fontSize: 14, lineHeight: 1.7, color: "#5e554d" }}>{body}</p>
               </div>
+            ))}
+          </div>
+        </section>
 
-              <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 10 }}>
-                {trustItems.map((item) => (
-                  <div
-                    key={item}
-                    style={{
-                      padding: "12px 14px",
-                      borderRadius: 18,
-                      background: "rgba(255,255,255,0.07)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      fontSize: 13,
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {item}
-                  </div>
-                ))}
+        <section id="workflow" style={{ marginTop: 52 }}>
+          <div className="eyebrow">Workflow</div>
+          <div className="grid gap-4 lg:grid-cols-3" style={{ marginTop: 14 }}>
+            {workflow.map((item) => (
+              <article key={item.title} className="panel" style={{ padding: 24 }}>
+                <div className="step-marker">{item.numeral}</div>
+                <h2 style={{ fontSize: 20, fontWeight: 650, letterSpacing: "-0.03em", marginTop: 12 }}>{item.title}</h2>
+                <p style={{ fontSize: 14, lineHeight: 1.78, color: "#5e554d", marginTop: 10 }}>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="features" style={{ marginTop: 52 }} className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <div className="panel" style={{ padding: 28 }}>
+            <div className="eyebrow">Feature set</div>
+            <h2 className="editorial-title" style={{ fontSize: "clamp(1.8rem,3vw,3rem)", marginTop: 12 }}>
+              Built for deliberate editing, not just one-click exporting.
+            </h2>
+            <p style={{ fontSize: 15, lineHeight: 1.85, color: "#5e554d", marginTop: 14 }}>
+              The workflow favors clarity at each step: ingest the footage, generate candidates, inspect the outputs, adjust subtitle treatment, and keep the resulting clips connected to their history and scheduling context.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 22, color: "#b85430", fontSize: 13, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              <Clock3 size={14} /> Review faster with less context switching
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {featureGrid.map((item) => (
+              <div key={item} className="panel-muted" style={{ padding: "18px 18px 20px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <CheckCircle2 size={17} style={{ color: "#b85430", marginTop: 2, flexShrink: 0 }} />
+                  <p style={{ fontSize: 14, lineHeight: 1.75, color: "#171412", fontWeight: 600 }}>{item}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="use-cases" style={{ marginTop: 52 }}>
+          <div className="eyebrow">Use cases</div>
+          <div className="grid gap-4 lg:grid-cols-3" style={{ marginTop: 14 }}>
+            {useCases.map(({ icon: Icon, title, body }) => (
+              <article key={title} className="panel" style={{ padding: 24 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    background: "rgba(184,84,48,0.08)",
+                    color: "#b85430",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon size={18} />
+                </div>
+                <h2 style={{ fontSize: 18, fontWeight: 650, letterSpacing: "-0.025em", marginTop: 14 }}>{title}</h2>
+                <p style={{ fontSize: 14, lineHeight: 1.78, color: "#5e554d", marginTop: 10 }}>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="faq" className="panel" style={{ marginTop: 52, padding: "30px 28px" }}>
+          <div className="eyebrow">Why Jumo Clip</div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]" style={{ marginTop: 12 }}>
+            <div>
+              <h2 className="editorial-title" style={{ fontSize: "clamp(1.8rem,3vw,3rem)" }}>
+                A quieter interface for a very operational job.
+              </h2>
+            </div>
+            <div style={{ display: "grid", gap: 18 }}>
+              <div style={{ paddingBottom: 16, borderBottom: "1px solid #f0e7d8" }}>
+                <div className="eyebrow" style={{ color: "#b85430" }}>Review</div>
+                <p style={{ marginTop: 8, fontSize: 14, lineHeight: 1.8, color: "#5e554d" }}>
+                  You can inspect clip choices instead of treating the generator as a black box.
+                </p>
+              </div>
+              <div style={{ paddingBottom: 16, borderBottom: "1px solid #f0e7d8" }}>
+                <div className="eyebrow" style={{ color: "#b85430" }}>Control</div>
+                <p style={{ marginTop: 8, fontSize: 14, lineHeight: 1.8, color: "#5e554d" }}>
+                  Subtitle edits, caption metadata, and regenerated outputs stay connected to the same job history.
+                </p>
+              </div>
+              <div>
+                <div className="eyebrow" style={{ color: "#b85430" }}>Continuity</div>
+                <p style={{ marginTop: 8, fontSize: 14, lineHeight: 1.8, color: "#5e554d" }}>
+                  The app is meant to carry footage from raw upload to final publishing steps without splitting the workflow apart.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "12px 28px 90px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 18,
-          }}
-        >
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              style={{
-                padding: "26px 24px",
-                borderRadius: 28,
-                background: "rgba(255,253,248,0.76)",
-                border: "1px solid #ddd4c5",
-                boxShadow: "0 20px 52px rgba(23,36,44,0.06)",
-              }}
-            >
-              <div
+        <section className="panel" style={{ marginTop: 52, padding: "30px 28px", marginBottom: 48 }}>
+          <div className="eyebrow">Call to action</div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]" style={{ alignItems: "center", marginTop: 12 }}>
+            <div>
+              <h2 className="editorial-title" style={{ fontSize: "clamp(1.8rem,3vw,3rem)" }}>
+                Start with one recording and leave with reviewable vertical clips.
+              </h2>
+              <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.85, color: "#5e554d", maxWidth: 720 }}>
+                Open the workspace to upload a video, choose the content mode, style subtitles, and move through the clipping flow in one place.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <Link
+                href="/upload"
                 style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 14,
-                  background: "rgba(25,78,86,0.08)",
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 16,
+                  gap: 8,
+                  padding: "13px 18px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  background: "#171412",
+                  color: "#f7f1e7",
+                  textDecoration: "none",
                 }}
               >
-                <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#b98752" }} />
-              </div>
-              <h2 className="font-display" style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.035em", lineHeight: 1.12 }}>{feature.title}</h2>
-              <p style={{ fontSize: 14, lineHeight: 1.8, color: "#5f6a6d", marginTop: 10 }}>{feature.body}</p>
+                Open workspace <ArrowRight size={15} />
+              </Link>
+              <Link
+                href="/register"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "13px 18px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#171412",
+                  textDecoration: "none",
+                  border: "1px solid #d7cebf",
+                  background: "#fbf7f1",
+                }}
+              >
+                Create account
+              </Link>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      </main>
 
-      <footer style={{ borderTop: "1px solid rgba(221,212,197,0.9)" }}>
+      <footer style={{ borderTop: "1px solid #d7cebf", background: "#f7f1e7" }}>
         <div
           style={{
             maxWidth: 1180,
             margin: "0 auto",
-            padding: "24px 28px 34px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 12,
+            padding: "26px 24px 40px",
+            display: "grid",
+            gap: 22,
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           }}
         >
-          <div style={{ fontSize: 13, color: "#8c9186" }}>Jumo workspace for AI-assisted video clipping and review.</div>
-          <div style={{ display: "flex", gap: 22 }}>
-            <Link href="/tos" style={{ fontSize: 13, color: "#5f6a6d", textDecoration: "none" }}>
-              Terms of Service
-            </Link>
-            <Link href="/privacy" style={{ fontSize: 13, color: "#5f6a6d", textDecoration: "none" }}>
-              Privacy Policy
-            </Link>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 12,
+                  background: "#171412",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Scissors size={14} color="#f7f1e7" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.03em" }}>Jumo Clip</div>
+                <div className="eyebrow" style={{ fontSize: 10 }}>Paper-native video workflow</div>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, lineHeight: 1.75, color: "#5e554d", marginTop: 12, maxWidth: 320 }}>
+              Upload, clip, refine subtitles, review outputs, and keep legal and publishing links visible in one calmer workspace.
+            </p>
+          </div>
+
+          <div>
+            <div className="eyebrow">Product</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              <Link href="/upload" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Open workspace</Link>
+              {/* <Link href="/guide" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Guide</Link> */}
+              <Link href="/history" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>History</Link>
+              <Link href="/scheduler" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Scheduler</Link>
+            </div>
+          </div>
+
+          <div>
+            <div className="eyebrow">Access</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              <Link href="/login" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Log in</Link>
+              <Link href="/register" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Create account</Link>
+            </div>
+          </div>
+
+          <div>
+            <div className="eyebrow">Legal</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              <Link href="/privacy" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Privacy Policy</Link>
+              <Link href="/tos" style={{ color: "#171412", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Terms of Service</Link>
+            </div>
           </div>
         </div>
       </footer>

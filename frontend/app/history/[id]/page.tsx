@@ -123,32 +123,32 @@ export default function HistoryDetailPage() {
   // ── Still loading / polling ──
   if (entry === undefined) {
     return (
-      <div className="flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+      <div className="page-shell page-shell-wide flex flex-col gap-6">
         <Link
           href="/history"
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium w-fit"
-          style={{ background: "#ffffff", color: "#706d67", border: "1px solid #e4e1da" }}
+          style={{ background: "#fbf7f1", color: "#5e554d", border: "1px solid #d7cebf" }}
         >
           <ArrowLeft className="w-3.5 h-3.5" /> History
         </Link>
 
         <div
           className="flex flex-col items-center justify-center gap-4 py-24 rounded-xl border"
-          style={{ background: "#ffffff", borderColor: "#e4e1da" }}
+          style={{ background: "#fbf7f1", borderColor: "#d7cebf" }}
         >
           {polling ? (
             <>
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#6d28d9" }} />
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#b85430" }} />
               <div className="text-center">
-                <p className="font-semibold text-sm" style={{ color: "#1c1917" }}>Still processing…</p>
-                <p className="text-xs mt-1" style={{ color: "#9e9b94" }}>{pollMessage || "Rendering clips, hang tight"}</p>
+                <p className="font-semibold text-sm" style={{ color: "#171412" }}>Still processing…</p>
+                <p className="text-xs mt-1" style={{ color: "#83786c" }}>{pollMessage || "Rendering clips, hang tight"}</p>
               </div>
-              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full" style={{ background: "rgba(109,40,217,0.07)", color: "#6d28d9" }}>
+              <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full" style={{ background: "rgba(184,84,48,0.07)", color: "#b85430" }}>
                 This page will update automatically when done
               </div>
             </>
           ) : (
-            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#9e9b94" }} />
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#83786c" }} />
           )}
         </div>
       </div>
@@ -158,20 +158,20 @@ export default function HistoryDetailPage() {
   // ── Not found ──
   if (entry === null) {
     return (
-      <div className="flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+      <div className="page-shell page-shell-reading flex flex-col gap-6">
         <Link
           href="/history"
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium w-fit"
-          style={{ background: "#ffffff", color: "#706d67", border: "1px solid #e4e1da" }}
+          style={{ background: "#fbf7f1", color: "#5e554d", border: "1px solid #d7cebf" }}
         >
           <ArrowLeft className="w-4 h-4" /> Back to History
         </Link>
         <div
           className="flex flex-col items-center justify-center py-24 rounded-xl border"
-          style={{ background: "#ffffff", borderColor: "#e4e1da" }}
+          style={{ background: "#fbf7f1", borderColor: "#d7cebf" }}
         >
-          <p className="font-semibold text-sm" style={{ color: "#1c1917" }}>Job not found</p>
-          <p className="text-sm mt-1" style={{ color: "#9e9b94" }}>This job may have been cleared or failed.</p>
+          <p className="font-semibold text-sm" style={{ color: "#171412" }}>Job not found</p>
+          <p className="text-sm mt-1" style={{ color: "#83786c" }}>This job may have been cleared or failed.</p>
         </div>
       </div>
     );
@@ -179,14 +179,14 @@ export default function HistoryDetailPage() {
 
   // ── Found ──
   return (
-    <div className="flex w-full max-w-9xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+    <div className="page-shell page-shell-wide flex flex-col gap-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link
               href="/history"
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-              style={{ background: "#ffffff", color: "#706d67", border: "1px solid #e4e1da", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+              style={{ background: "#fbf7f1", color: "#5e554d", border: "1px solid #d7cebf", boxShadow: "none" }}
             >
               <ArrowLeft className="w-3.5 h-3.5" /> History
             </Link>

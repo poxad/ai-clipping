@@ -35,39 +35,39 @@ export function ProgressCard({ status, progress, message, logs }: Props) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
-      style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+      style={{ border: "1px solid #d7cebf", background: "#fbf7f1" }}
     >
       {/* Progress bar — top */}
-      <div style={{ height: 3, background: "#f0ede8" }}>
+      <div style={{ height: 3, background: "#f0e7d8" }}>
         <div
           className="h-full transition-all duration-700"
           style={{
             width: `${progress}%`,
-            background: "linear-gradient(90deg, #6d28d9, #e11d48)",
+            background: "#171412",
             borderRadius: "0 2px 2px 0",
           }}
         />
       </div>
 
       {/* Header */}
-      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #f0ede8" }}>
+      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #f0e7d8" }}>
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(109,40,217,0.08)" }}
+            style={{ background: "rgba(184,84,48,0.08)" }}
           >
-            <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#6d28d9" }} />
+            <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#b85430" }} />
           </div>
           <div>
-            <div className="text-sm font-bold" style={{ color: "#1c1917" }}>
+            <div className="text-sm font-semibold" style={{ color: "#171412" }}>
               AI is processing your video
             </div>
             {message && (
-              <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{message}</div>
+              <div className="text-xs mt-0.5" style={{ color: "#83786c" }}>{message}</div>
             )}
           </div>
         </div>
-        <span className="text-2xl font-black tabular-nums" style={{ color: "#6d28d9" }}>
+        <span className="text-xl font-bold tabular-nums font-mono" style={{ color: "#171412" }}>
           {progress}%
         </span>
       </div>
@@ -84,15 +84,15 @@ export function ProgressCard({ status, progress, message, logs }: Props) {
                 style={{
                   background:
                     state === "done"   ? "rgba(22,163,74,0.1)" :
-                    state === "active" ? "rgba(109,40,217,0.1)" : "#f0ede8",
+                    state === "active" ? "rgba(184,84,48,0.1)" : "#f0e7d8",
                 }}
               >
                 {state === "done" ? (
                   <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#16a34a" }} />
                 ) : state === "active" ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#6d28d9" }} />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#b85430" }} />
                 ) : (
-                  <div className="w-2 h-2 rounded-full" style={{ background: "#d4d0c9" }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: "#bfb39e" }} />
                 )}
               </div>
 
@@ -103,13 +103,13 @@ export function ProgressCard({ status, progress, message, logs }: Props) {
                   style={{
                     color:
                       state === "done"   ? "#16a34a" :
-                      state === "active" ? "#6d28d9" : "#c4c1bb",
+                      state === "active" ? "#b85430" : "#bfb39e",
                   }}
                 >
                   {label}
                 </span>
                 {state === "active" && (
-                  <span className="text-xs ml-2" style={{ color: "#9e9b94" }}>{desc}</span>
+                  <span className="text-xs ml-2" style={{ color: "#83786c" }}>{desc}</span>
                 )}
               </div>
 
@@ -123,10 +123,10 @@ export function ProgressCard({ status, progress, message, logs }: Props) {
 
       {/* Logs */}
       {logs.length > 0 && (
-        <div style={{ borderTop: "1px solid #f0ede8" }}>
+        <div style={{ borderTop: "1px solid #f0e7d8" }}>
           <button
-            className="flex items-center gap-1.5 w-full px-5 py-2.5 text-xs font-medium transition-colors hover:bg-[#fafaf8]"
-            style={{ color: "#9e9b94" }}
+            className="flex items-center gap-1.5 w-full px-5 py-2.5 text-xs font-medium transition-colors hover:bg-[#f7f1e7]"
+            style={{ color: "#83786c" }}
             onClick={() => setLogsVisible((v) => !v)}
           >
             {logsVisible ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -135,10 +135,10 @@ export function ProgressCard({ status, progress, message, logs }: Props) {
           {logsVisible && (
             <div
               className="mx-4 mb-4 rounded-xl px-3 py-2.5 text-xs font-mono max-h-36 overflow-y-auto"
-              style={{ background: "#f7f6f3", border: "1px solid #e4e1da", color: "#9e9b94", lineHeight: 1.6 }}
+              style={{ background: "#f7f1e7", border: "1px solid #d7cebf", color: "#83786c", lineHeight: 1.6 }}
             >
               {logs.map((line, i) => (
-                <div key={i} style={{ color: i === logs.length - 1 ? "#1c1917" : undefined }}>
+                <div key={i} style={{ color: i === logs.length - 1 ? "#171412" : undefined }}>
                   {line}
                 </div>
               ))}

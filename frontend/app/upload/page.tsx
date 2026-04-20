@@ -14,26 +14,26 @@ import { useHistory } from "@/lib/useHistory";
 import { uploadSingle, uploadBatch } from "@/lib/api";
 import { useUserSettings } from "@/lib/useUserSettings";
 import type { Clip, StylePayload } from "@/lib/types";
-import { Store, Mic, ChevronDown, ChevronUp, Wand2, Check, X, Play } from "lucide-react";
+import { Store, Mic, Sparkles, ChevronDown, ChevronUp, Wand2, Check, X, Play } from "lucide-react";
 
 type Mode = "single" | "batch";
-type ContentType = "retail" | "podcast";
+type ContentType = "retail" | "podcast" | "general";
 
 const VOCAB_KEY = "whisper_vocab";
 const CONTENT_TYPE_KEY = "content_type";
 
 function SectionLabel({ step, title, desc }: { step: number; title: string; desc: string }) {
+  const numeral = ["I", "II", "III"][step - 1] ?? String(step);
+
   return (
     <div className="flex items-start gap-3 mb-4">
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-        style={{ background: "linear-gradient(135deg, #6d28d9, #7c3aed)", color: "white" }}
-      >
-        {step}
+      <div className="step-marker mt-0.5 min-w-7 flex-shrink-0">
+        {numeral}
       </div>
       <div>
-        <div className="text-sm font-bold" style={{ color: "#1c1917" }}>{title}</div>
-        <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{desc}</div>
+        <div className="eyebrow">Step {numeral}</div>
+        <div className="editorial-title mt-1 text-[1.45rem]" style={{ color: "#171412" }}>{title}</div>
+        <div className="text-sm mt-1.5 max-w-2xl" style={{ color: "#5e554d" }}>{desc}</div>
       </div>
     </div>
   );
@@ -58,12 +58,13 @@ export default function UploadPage() {
   const { jobId, pollState, startJob, reset } = useJob();
   const didHydrateRemoteSettings = useRef(false);
   const hasPrimedRemoteSave = useRef(false);
+  const resetRef = useRef(reset);
 
   useEffect(() => {
     const saved = localStorage.getItem(VOCAB_KEY);
     if (saved) setWhisperVocab(saved);
     const savedContentType = localStorage.getItem(CONTENT_TYPE_KEY);
-    if (savedContentType === "retail" || savedContentType === "podcast") {
+    if (savedContentType === "retail" || savedContentType === "podcast" || savedContentType === "general") {
       setContentType(savedContentType);
     }
   }, []);
@@ -108,10 +109,16 @@ export default function UploadPage() {
 
   const prevStatus = useRef<string>("");
   useEffect(() => {
+    resetRef.current = reset;
+  }, [reset]);
+
+  useEffect(() => {
     // Only redirect if the status *transitioned* to done during this session
     // (not if we loaded with an already-done stale job from localStorage)
     if (pollState.status === "done" && jobId && prevStatus.current !== "" && prevStatus.current !== "done") {
-      router.push(`/history/${jobId}`);
+      const completedJobId = jobId;
+      resetRef.current();
+      router.push(`/history/${completedJobId}`);
     }
     prevStatus.current = pollState.status;
   }, [pollState.status, jobId, router]);
@@ -168,15 +175,16 @@ export default function UploadPage() {
   const showClips = pollState.status === "done" && pollState.clips.length > 0;
 
   return (
-    <div className="flex w-full max-w-9xl flex-col gap-6 p-4 sm:gap-8 sm:p-6 lg:p-8">
+    <div className="page-shell page-shell-wide flex flex-col gap-6 sm:gap-8">
 
       {/* Page header */}
       {!jobId && (
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1c1917", letterSpacing: "-0.02em" }}>
+          {/* <div className="eyebrow">Editorial Workshop</div> */}
+          <h1 className="editorial-title mt-2 text-[clamp(2.25rem,4vw,4.75rem)]" style={{ color: "#171412" }}>
             Create TikTok Clips
           </h1>
-          <p className="text-sm mt-1.5" style={{ color: "#9e9b94", lineHeight: 1.6 }}>
+          <p className="text-base mt-4" style={{ color: "#5e554d", lineHeight: 1.8 }}>
             Upload a store recording — AI transcribes it, finds the best moments, and produces ready-to-post short clips.
           </p>
         </div>
@@ -185,36 +193,36 @@ export default function UploadPage() {
       {/* Step 1 — Content type */}
       {!jobId && (
         <div
-          className="rounded-2xl p-4 sm:p-5"
-          style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
+          className="panel p-4 sm:p-5 lg:p-7"
         >
           <SectionLabel step={1} title="What type of video is this?" desc="Helps the AI pick better clip boundaries and captions" />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             {([
               { key: "retail",  icon: Store, label: "Employee Generated Content",  desc: "Customer service, product demos, try-ons" },
               { key: "podcast", icon: Mic,   label: "Podcast / Talk",  desc: "Interviews, conversations, commentary" },
+              { key: "general", icon: Sparkles, label: "General", desc: "Any footage type, broad short-form clip discovery" },
             ] as const).map(({ key, icon: Icon, label, desc }) => (
               <button
                 key={key}
                 onClick={() => setContentType(key)}
                 className="flex items-start gap-3 px-4 py-3.5 rounded-xl text-left transition-all"
                 style={{
-                  background: contentType === key ? "rgba(109,40,217,0.06)" : "#fafaf8",
-                  border: `2px solid ${contentType === key ? "#6d28d9" : "#e4e1da"}`,
-                  boxShadow: contentType === key ? "0 0 0 3px rgba(109,40,217,0.08)" : "none",
+                  background: contentType === key ? "rgba(184,84,48,0.05)" : "#f7f1e7",
+                  border: `1px solid ${contentType === key ? "#b85430" : "#d7cebf"}`,
+                  boxShadow: "none",
                 }}
               >
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: contentType === key ? "rgba(109,40,217,0.12)" : "#f0ede8" }}
+                  style={{ background: contentType === key ? "rgba(184,84,48,0.12)" : "#f0e7d8" }}
                 >
-                  <Icon className="w-4 h-4" style={{ color: contentType === key ? "#6d28d9" : "#9e9b94" }} />
+                  <Icon className="w-4 h-4" style={{ color: contentType === key ? "#b85430" : "#83786c" }} />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold" style={{ color: contentType === key ? "#6d28d9" : "#1c1917" }}>
+                  <div className="text-sm font-semibold" style={{ color: "#171412" }}>
                     {label}
                   </div>
-                  <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{desc}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "#83786c" }}>{desc}</div>
                 </div>
               </button>
             ))}
@@ -225,8 +233,7 @@ export default function UploadPage() {
       {/* Step 2 — Upload */}
       {!jobId && (
         <div
-          className="rounded-2xl p-4 sm:p-5"
-          style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
+          className="panel p-4 sm:p-5 lg:p-7"
         >
           <SectionLabel step={2} title="Upload your video" desc="Drop a raw recording — unedited is totally fine" />
 
@@ -234,17 +241,17 @@ export default function UploadPage() {
             /* Staged file pill */
             <div
               className="flex flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center rounded-xl"
-              style={{ background: "rgba(22,163,74,0.06)", border: "1.5px solid rgba(22,163,74,0.25)" }}
+              style={{ background: "rgba(44,106,80,0.06)", border: "1px solid rgba(44,106,80,0.2)" }}
             >
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(22,163,74,0.12)" }}
+                style={{ background: "rgba(44,106,80,0.12)" }}
               >
-                <Check className="w-4 h-4" style={{ color: "#16a34a" }} />
+                <Check className="w-4 h-4" style={{ color: "#2c6a50" }} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate" style={{ color: "#1c1917" }}>{stagedFile.name}</div>
-                <div className="text-xs" style={{ color: "#9e9b94" }}>{(stagedFile.size / (1024 * 1024)).toFixed(1)} MB · Ready to process</div>
+                <div className="text-sm font-semibold truncate" style={{ color: "#171412" }}>{stagedFile.name}</div>
+                <div className="text-xs font-mono" style={{ color: "#83786c" }}>{(stagedFile.size / (1024 * 1024)).toFixed(1)} MB · Ready to process</div>
               </div>
               <button
                 onClick={() => setStagedFile(null)}
@@ -279,8 +286,8 @@ export default function UploadPage() {
             <button
               onClick={() => setShowVocab((v) => !v)}
               className="flex items-center gap-2 text-xs font-semibold transition-colors w-full"
-              style={{ color: showVocab ? "#6d28d9" : "#9e9b94" }}
-            >
+                style={{ color: showVocab ? "#b85430" : "#83786c" }}
+              >
               <Wand2 className="w-3.5 h-3.5" />
               Brand name hints for better transcription
               {showVocab
@@ -290,7 +297,7 @@ export default function UploadPage() {
             </button>
             {showVocab && (
               <div className="mt-3">
-                <p className="text-xs mb-2" style={{ color: "#9e9b94" }}>
+                <p className="text-xs mb-2" style={{ color: "#83786c" }}>
                   Add brand names, product names, or local words the AI might misspell — one per line.
                 </p>
                 <textarea
@@ -300,15 +307,15 @@ export default function UploadPage() {
                   placeholder={"Kacamata Moo\nlensa kontak\nsilinder\ncek mata"}
                   className="w-full rounded-xl px-3 py-2.5 text-xs resize-none"
                   style={{
-                    background: "#fafaf8",
-                    border: "1px solid #e4e1da",
-                    color: "#1c1917",
+                    background: "#f7f1e7",
+                    border: "1px solid #d7cebf",
+                    color: "#171412",
                     outline: "none",
-                    fontFamily: "monospace",
+                    fontFamily: "var(--font-mono)",
                     lineHeight: 1.6,
                   }}
                 />
-                <p className="text-[11px] mt-2" style={{ color: "#c4c1bb" }}>
+                <p className="text-[11px] mt-2 font-mono" style={{ color: "#83786c" }}>
                   Brand hints and content type are saved to your Supabase settings automatically.
                 </p>
               </div>
@@ -320,19 +327,14 @@ export default function UploadPage() {
       {/* Step 3 — Subtitle style */}
       {!jobId && (
         <div
-          className="rounded-2xl overflow-hidden"
-          style={{ border: "1px solid #e4e1da", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
+          className="panel overflow-hidden"
         >
           <div className="flex items-start gap-3 px-4 pt-4 pb-4 sm:px-5 sm:pt-5">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-              style={{ background: "linear-gradient(135deg, #6d28d9, #7c3aed)", color: "white" }}
-            >
-              3
-            </div>
+            <div className="step-marker mt-0.5 min-w-7 flex-shrink-0">III</div>
             <div>
-              <div className="text-sm font-bold" style={{ color: "#1c1917" }}>Subtitle Style</div>
-              <div className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>Pick a template, choose your font, then process</div>
+              <div className="eyebrow">Step III</div>
+              <div className="editorial-title mt-1 text-[1.45rem]" style={{ color: "#171412" }}>Subtitle Style</div>
+              <div className="text-sm mt-1.5" style={{ color: "#5e554d" }}>Pick a template, choose your font, then process.</div>
             </div>
           </div>
           <SubtitleEditor onStyleChange={setSubtitleStyle} />
@@ -346,13 +348,12 @@ export default function UploadPage() {
           disabled={!stagedFile || uploading}
           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-base transition-all"
           style={{
-            background: stagedFile && !uploading
-              ? "linear-gradient(135deg, #6d28d9, #7c3aed)"
-              : "#e4e1da",
-            color: stagedFile && !uploading ? "#ffffff" : "#9e9b94",
-            boxShadow: stagedFile && !uploading ? "0 4px 20px rgba(109,40,217,0.35)" : "none",
+            background: stagedFile && !uploading ? "#171412" : "#d7cebf",
+            color: stagedFile && !uploading ? "#f7f1e7" : "#83786c",
+            boxShadow: "none",
             cursor: stagedFile && !uploading ? "pointer" : "not-allowed",
-            letterSpacing: "-0.01em",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
           }}
         >
           <Play className="w-5 h-5" style={{ flexShrink: 0 }} />
@@ -373,7 +374,7 @@ export default function UploadPage() {
       {error && (
         <div
           className="flex items-start gap-3 px-4 py-3.5 rounded-xl text-sm"
-          style={{ background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.18)", color: "#dc2626" }}
+          style={{ background: "rgba(184,84,48,0.06)", border: "1px solid rgba(184,84,48,0.18)", color: "#b85430" }}
         >
           <span className="text-base flex-shrink-0">⚠️</span>
           <div>

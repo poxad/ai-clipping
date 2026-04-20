@@ -89,18 +89,18 @@ function AccountsPanel() {
   return (
     <div
       className="rounded-xl overflow-hidden flex flex-col"
-      style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+      style={{ border: "1px solid #d7cebf", background: "#fbf7f1", boxShadow: "none" }}
     >
-      <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
+      <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ borderBottom: "1px solid #d7cebf" }}>
         <div>
-          <h2 className="text-sm font-semibold" style={{ color: "#1c1917" }}>TikTok Accounts</h2>
-          <p className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>{accounts.length} connected</p>
+          <h2 className="text-sm font-semibold" style={{ color: "#171412" }}>TikTok Accounts</h2>
+          <p className="text-xs mt-0.5" style={{ color: "#83786c" }}>{accounts.length} connected</p>
         </div>
         <button
           onClick={handleAddAccount}
           disabled={adding}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 transition-all"
-          style={{ background: "linear-gradient(135deg, #6d28d9, #e11d48)", color: "white" }}
+          style={{ background: "#171412", color: "#f7f1e7" }}
         >
           {adding ? "Redirecting…" : "+ Add Account"}
         </button>
@@ -118,26 +118,26 @@ function AccountsPanel() {
           <p className="text-xs text-center py-4" style={{ color: "#9e9b94" }}>Loading…</p>
         ) : accounts.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm mb-1" style={{ color: "#706d67" }}>No accounts connected yet</p>
-            <p className="text-xs" style={{ color: "#9e9b94" }}>Click "+ Add Account" to authorize via OAuth</p>
+            <p className="text-sm mb-1" style={{ color: "#5e554d" }}>No accounts connected yet</p>
+            <p className="text-xs" style={{ color: "#83786c" }}>Click "+ Add Account" to authorize via OAuth</p>
           </div>
         ) : (
           accounts.map((acc) => (
             <div
               key={acc.id}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-              style={{ background: "#f7f6f3", border: "1px solid #e4e1da" }}
+              style={{ background: "#f7f1e7", border: "1px solid #d7cebf" }}
             >
               {acc.avatar_url ? (
                 <img src={acc.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
               ) : (
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                  style={{ background: "#efede8", color: "#706d67" }}>
+                  style={{ background: "#f0e7d8", color: "#5e554d" }}>
                   {(acc.display_name || "@")[0].toUpperCase()}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate" style={{ color: "#1c1917" }}>
+                <p className="text-xs font-semibold truncate font-mono" style={{ color: "#171412" }}>
                   @{acc.display_name || acc.open_id}
                 </p>
               </div>
@@ -221,15 +221,15 @@ function MonthCalendar({
         <button
           onClick={() => setViewDate(new Date(year, month - 1, 1))}
           className="p-1.5 rounded-lg transition-all"
-          style={{ color: "#706d67", background: "#f7f6f3", border: "1px solid #e4e1da" }}
+          style={{ color: "#5e554d", background: "#f7f1e7", border: "1px solid #d7cebf" }}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold" style={{ color: "#1c1917" }}>{monthLabel}</span>
+        <span className="text-sm font-semibold" style={{ color: "#171412" }}>{monthLabel}</span>
         <button
           onClick={() => setViewDate(new Date(year, month + 1, 1))}
           className="p-1.5 rounded-lg transition-all"
-          style={{ color: "#706d67", background: "#f7f6f3", border: "1px solid #e4e1da" }}
+          style={{ color: "#5e554d", background: "#f7f1e7", border: "1px solid #d7cebf" }}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -238,7 +238,7 @@ function MonthCalendar({
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 mb-1">
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-          <div key={d} className="text-center text-xs font-semibold" style={{ color: "#9e9b94" }}>
+          <div key={d} className="text-center text-xs font-semibold" style={{ color: "#83786c" }}>
             {d}
           </div>
         ))}
@@ -280,21 +280,21 @@ function MonthCalendar({
               style={{
                 minHeight: 48,
                 background: isSelected
-                  ? "rgba(109,40,217,0.1)"
+                  ? "rgba(184,84,48,0.1)"
                   : isToday
-                  ? "rgba(109,40,217,0.04)"
+                  ? "rgba(184,84,48,0.04)"
                   : "transparent",
                 border: isSelected
-                  ? "1px solid rgba(109,40,217,0.3)"
+                  ? "1px solid rgba(184,84,48,0.3)"
                   : isToday
-                  ? "1px solid rgba(109,40,217,0.15)"
+                  ? "1px solid rgba(184,84,48,0.15)"
                   : "1px solid transparent",
               }}
             >
               <span
                 className="text-xs flex items-center justify-center rounded-full w-6 h-6"
                 style={{
-                  color: isSelected ? "#6d28d9" : isToday ? "#6d28d9" : "#1c1917",
+                  color: isSelected ? "#b85430" : isToday ? "#b85430" : "#171412",
                   fontWeight: isToday || isSelected ? 700 : 500,
                 }}
               >
@@ -398,20 +398,20 @@ function ScheduleCalendar() {
   return (
     <div
       className="rounded-xl overflow-hidden flex flex-col"
-      style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+      style={{ border: "1px solid #d7cebf", background: "#fbf7f1", boxShadow: "none" }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
+      <div className="flex items-center justify-between px-4 py-4 sm:px-5" style={{ borderBottom: "1px solid #d7cebf" }}>
         <div>
-          <h2 className="text-sm font-semibold" style={{ color: "#1c1917" }}>Schedule</h2>
-          <p className="text-xs mt-0.5" style={{ color: "#9e9b94" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "#171412" }}>Schedule</h2>
+          <p className="text-xs mt-0.5" style={{ color: "#83786c" }}>
             {pendingCount} pending · {posts.length} total
           </p>
         </div>
         <button
           onClick={load}
           className="p-2 rounded-lg transition-all"
-          style={{ color: "#9e9b94", border: "1px solid #e4e1da", background: "#f7f6f3" }}
+          style={{ color: "#83786c", border: "1px solid #d7cebf", background: "#f7f1e7" }}
           title="Refresh"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -432,7 +432,7 @@ function ScheduleCalendar() {
       ) : (
         <div className="flex flex-col">
           {/* Calendar */}
-          <div className="px-3 py-4 sm:px-5" style={{ borderBottom: "1px solid #e4e1da" }}>
+          <div className="px-3 py-4 sm:px-5" style={{ borderBottom: "1px solid #d7cebf" }}>
             <MonthCalendar
               posts={posts}
               selectedDate={selectedDate}
@@ -445,9 +445,9 @@ function ScheduleCalendar() {
             {/* Section label */}
             <div
               className="sticky top-0 flex items-center justify-between px-3 py-2.5 sm:px-5"
-              style={{ background: "#fafaf8", borderBottom: "1px solid #e4e1da", zIndex: 1 }}
+              style={{ background: "#f7f1e7", borderBottom: "1px solid #d7cebf", zIndex: 1 }}
             >
-              <span className="text-xs font-semibold" style={{ color: "#9e9b94" }}>
+              <span className="text-xs font-semibold" style={{ color: "#83786c" }}>
                 {selectedDate
                   ? selectedDate.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
                   : "All Posts"}
@@ -456,7 +456,7 @@ function ScheduleCalendar() {
                 <button
                   onClick={() => setSelectedDate(null)}
                   className="text-xs font-medium"
-                  style={{ color: "#6d28d9" }}
+                  style={{ color: "#b85430" }}
                 >
                   Show all
                 </button>
@@ -465,12 +465,12 @@ function ScheduleCalendar() {
 
             {visiblePosts.length === 0 ? (
               <div className="text-center py-10">
-                <Calendar className="w-7 h-7 mx-auto mb-2" style={{ color: "#e4e1da" }} />
-                <p className="text-sm" style={{ color: "#706d67" }}>
+                <Calendar className="w-7 h-7 mx-auto mb-2" style={{ color: "#d7cebf" }} />
+                <p className="text-sm" style={{ color: "#5e554d" }}>
                   {selectedDate ? "Nothing scheduled this day" : "No posts scheduled yet"}
                 </p>
                 {!selectedDate && (
-                  <p className="text-xs mt-1" style={{ color: "#9e9b94" }}>
+                  <p className="text-xs mt-1" style={{ color: "#83786c" }}>
                     Click "Schedule" on any clip to add it to the queue
                   </p>
                 )}
@@ -480,7 +480,7 @@ function ScheduleCalendar() {
                 <div
                   key={post.id}
                   className="flex flex-wrap items-start gap-3 px-3 py-3 sm:items-center sm:px-5"
-                  style={{ borderBottom: "1px solid #f0ede8" }}
+                  style={{ borderBottom: "1px solid #f0e7d8" }}
                 >
                   {/* Time */}
                   {editingId === post.id ? (
@@ -489,14 +489,14 @@ function ScheduleCalendar() {
                         type="date" value={editDate}
                         onChange={(e) => setEditDate(e.target.value)}
                         className="text-xs rounded-lg px-2 py-1 outline-none w-full"
-                        style={{ border: "1px solid #6d28d9", color: "#1c1917", background: "#fff" }}
+                        style={{ border: "1px solid #b85430", color: "#171412", background: "#fbf7f1" }}
                         onClick={(e) => e.stopPropagation()}
                       />
                       <input
                         type="time" value={editTime}
                         onChange={(e) => setEditTime(e.target.value)}
                         className="text-xs rounded-lg px-2 py-1 outline-none w-full"
-                        style={{ border: "1px solid #6d28d9", color: "#1c1917", background: "#fff" }}
+                        style={{ border: "1px solid #b85430", color: "#171412", background: "#fbf7f1" }}
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>

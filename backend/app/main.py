@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config
 from .clipper import Clip, build_clips, create_clip_video, _group_into_utterances, _words_to_segments
-from .reframer import get_portrait_crop_filter
+from .reframer import get_reframe_plan
 from .transcriber import WordSegment, extract_audio, transcribe
 from .scheduler import router as scheduler_router, scheduler_loop
 from .jobstore import init_db, create_job, update_job as _store_update, get_job
@@ -300,10 +300,10 @@ async def _process_single_video(
                     message=f"Composed {len(clips_with_meta)} story clip(s). Detecting orientation...")
 
         # 3b. Detect orientation
-        crop_filter = await asyncio.to_thread(get_portrait_crop_filter, video_path)
-        if crop_filter:
+        reframe_plan = await asyncio.to_thread(get_reframe_plan, video_path)
+        if reframe_plan:
             _update_job(job_id,
-                        message="Landscape video detected — auto-reframing to 9:16 with face centering...")
+                        message="Landscape video detected — auto-reframing to 9:16 with active-speaker centering...")
 
         _update_job(job_id, progress=progress_base + int(span * 0.50),
                     message=f"Rendering {len(clips_with_meta)} clip(s)...")
@@ -321,7 +321,7 @@ async def _process_single_video(
                         message=f"Rendering clip {render_idx + 1} of {len(clips_with_meta)}...")
 
             success = await asyncio.to_thread(
-                create_clip_video, video_path, clip, clip_path, crop_filter, style_dict
+                create_clip_video, video_path, clip, clip_path, reframe_plan, style_dict
             )
             print(f"[RENDER] clip_{global_index:03d} create_clip_video={success} exists={os.path.exists(clip_path)} size={os.path.getsize(clip_path) if os.path.exists(clip_path) else 0}")
 
@@ -401,10 +401,10 @@ def _get_video_duration_sync(video_path: str) -> float:
 
 
 def _find_source(t: float, sources: list) -> tuple:
-    """Return (path, offset, duration, crop_filter) for the source containing timestamp t."""
-    for path, offset, duration, crop_filter in sources:
+    """Return (path, offset, duration, reframe_plan) for the source containing timestamp t."""
+    for path, offset, duration, reframe_plan in sources:
         if offset <= t < offset + duration + 1.0:  # +1s tolerance at boundaries
-            return path, offset, duration, crop_filter
+            return path, offset, duration, reframe_plan
     return sources[-1]
 
 
@@ -450,7 +450,7 @@ async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Opti
         return
 
     total = len(video_paths)
-    sources: list = []   # (path, offset, duration, crop_filter)
+    sources: list = []   # (path, offset, duration, reframe_plan)
     all_words: list = []
     cumulative = 0.0
 
@@ -469,7 +469,7 @@ async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Opti
                 await asyncio.to_thread(extract_audio, vpath, audio_path)
                 words = await asyncio.to_thread(transcribe, audio_path, lang, whisper_prompt or None)
                 duration = await asyncio.to_thread(_get_video_duration_sync, vpath)
-                crop_filter = await asyncio.to_thread(get_portrait_crop_filter, vpath)
+                reframe_plan = await asyncio.to_thread(get_reframe_plan, vpath)
             finally:
                 if os.path.exists(audio_path):
                     os.remove(audio_path)
@@ -479,7 +479,7 @@ async def _process_videos_batch(job_id: str, video_paths: list, style_dict: Opti
                 w.end += cumulative
 
             all_words.extend(words)
-            sources.append((vpath, cumulative, duration, crop_filter))
+            sources.append((vpath, cumulative, duration, reframe_plan))
             cumulative += duration
 
         if not all_words:
@@ -1024,9 +1024,9 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
         _update_job(job_id, status="rendering", progress=45,
                     message=f"Composed {len(clips_with_meta)} story clip(s). Detecting orientation...")
 
-        crop_filter = await asyncio.to_thread(get_portrait_crop_filter, video_path)
-        if crop_filter:
-            _update_job(job_id, message="Landscape video detected — auto-reframing to 9:16...")
+        reframe_plan = await asyncio.to_thread(get_reframe_plan, video_path)
+        if reframe_plan:
+            _update_job(job_id, message="Landscape video detected — auto-reframing to 9:16 with active-speaker centering...")
 
         _update_job(job_id, progress=48, message=f"Rendering {len(clips_with_meta)} clip(s)...")
 
@@ -1037,7 +1037,7 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
             _update_job(job_id, progress=48 + int(47 * (render_idx / len(clips_with_meta))),
                         message=f"Rendering clip {render_idx + 1} of {len(clips_with_meta)}...")
             success = await asyncio.to_thread(
-                create_clip_video, video_path, clip, clip_path, crop_filter, style_dict
+                create_clip_video, video_path, clip, clip_path, reframe_plan, style_dict
             )
             if success:
                 raw_path = clip_path.replace(".mp4", "_raw.mp4")

@@ -33,14 +33,15 @@ const PILLARS = [
 
 export default function GuidePage() {
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-8 p-4 sm:p-6 lg:p-8">
+    <div className="page-shell page-shell-reading flex flex-col gap-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2.5" style={{ color: "#1c1917" }}>
-          <BookOpen className="w-6 h-6" style={{ color: "#6d28d9" }} />
+        <div className="eyebrow">Reference</div>
+        <h1 className="editorial-title mt-2 flex items-center gap-3 text-[clamp(2rem,3vw,3.25rem)]" style={{ color: "#171412" }}>
+          <BookOpen className="h-7 w-7 flex-shrink-0" style={{ color: "#b85430" }} />
           Scoring Guide
         </h1>
-        <p className="text-sm mt-1" style={{ color: "#9e9b94" }}>
+        <p className="text-base mt-3" style={{ color: "#5e554d" }}>
           How the AI grades and selects clips from your store recordings.
         </p>
       </div>
@@ -74,24 +75,24 @@ export default function GuidePage() {
             <div
               key={m.name}
               className="px-4 py-3 rounded-xl flex flex-col gap-1"
-              style={{ background: "#ffffff", border: "1px solid #e4e1da" }}
+              style={{ background: "#fbf7f1", border: "1px solid #d7cebf" }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold" style={{ color: "#1c1917" }}>{m.name}</span>
+                <span className="text-sm font-semibold" style={{ color: "#171412" }}>{m.name}</span>
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(109,40,217,0.08)", color: "#6d28d9", border: "1px solid rgba(109,40,217,0.15)" }}
+                  style={{ background: "rgba(184,84,48,0.08)", color: "#b85430", border: "1px solid rgba(184,84,48,0.15)" }}
                 >
                   {m.weight}
                 </span>
               </div>
-              <p className="text-xs leading-relaxed" style={{ color: "#9e9b94" }}>{m.desc}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "#83786c" }}>{m.desc}</p>
             </div>
           ))}
         </div>
         <div
           className="mt-3 px-4 py-2.5 rounded-xl text-xs font-mono"
-          style={{ background: "#f7f6f3", border: "1px solid #e4e1da", color: "#706d67" }}
+          style={{ background: "#f7f1e7", border: "1px solid #d7cebf", color: "#5e554d" }}
         >
           score = virality×0.35 + coherence×0.30 + energy×0.20 + completeness×0.15
         </div>
@@ -107,13 +108,13 @@ export default function GuidePage() {
             <div
               key={c.type}
               className="flex items-start gap-3 px-4 py-3 rounded-xl"
-              style={{ background: "#ffffff", border: "1px solid #e4e1da" }}
+              style={{ background: "#fbf7f1", border: "1px solid #d7cebf" }}
             >
               <span className="text-lg flex-shrink-0">{c.emoji}</span>
               <div>
                 <span
                   className="inline-block text-xs font-bold px-2 py-0.5 rounded-md mb-1"
-                  style={{ background: "rgba(109,40,217,0.08)", color: "#6d28d9" }}
+                  style={{ background: "rgba(184,84,48,0.08)", color: "#b85430" }}
                 >
                   {c.type}
                 </span>
@@ -134,18 +135,18 @@ export default function GuidePage() {
             <div
               key={p.name}
               className="px-4 py-3 rounded-xl"
-              style={{ background: "#ffffff", border: "1px solid #e4e1da" }}
+              style={{ background: "#fbf7f1", border: "1px solid #d7cebf" }}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span
                   className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{ background: "rgba(109,40,217,0.1)", color: "#6d28d9" }}
+                  style={{ background: "rgba(184,84,48,0.1)", color: "#b85430" }}
                 >
                   {i + 1}
                 </span>
-                <span className="text-sm font-semibold" style={{ color: "#1c1917" }}>{p.name}</span>
+                <span className="text-sm font-semibold" style={{ color: "#171412" }}>{p.name}</span>
               </div>
-              <p className="text-xs leading-relaxed" style={{ color: "#9e9b94" }}>{p.desc}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "#83786c" }}>{p.desc}</p>
             </div>
           ))}
         </div>
@@ -170,7 +171,7 @@ export default function GuidePage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#9e9b94" }}>{title}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#83786c" }}>{title}</h2>
       {children}
     </div>
   );
@@ -183,7 +184,7 @@ function Row({ label, good }: { label: string; good?: boolean }) {
       style={{
         background: good ? "rgba(22,163,74,0.04)" : "rgba(220,38,38,0.04)",
         border: `1px solid ${good ? "rgba(22,163,74,0.15)" : "rgba(220,38,38,0.12)"}`,
-        color: "#706d67",
+        color: "#5e554d",
       }}
     >
       <span className="text-base flex-shrink-0">{good ? "✅" : "❌"}</span>

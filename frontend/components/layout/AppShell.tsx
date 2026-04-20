@@ -31,8 +31,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div
           className="fixed inset-x-0 top-0 z-30 border-b px-4 py-3 lg:hidden"
           style={{
-            background: "rgba(251,248,242,0.94)",
-            borderColor: "#ddd4c5",
+            background: "rgba(247,241,231,0.96)",
+            borderColor: "#d7cebf",
             backdropFilter: "blur(18px)",
           }}
         >
@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setMobileNavOpen(true)}
             className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl border"
-            style={{ borderColor: "#ddd4c5", background: "rgba(255,253,248,0.9)", color: "#194e56" }}
+            style={{ borderColor: "#d7cebf", background: "#fbf7f1", color: "#171412" }}
             aria-label="Open navigation"
             type="button"
           >
@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="pointer-events-none min-w-0 px-14 text-center">
-            <div className="font-display text-sm font-semibold" style={{ color: "#17242c", letterSpacing: "-0.02em" }}>
+            <div className="text-sm font-semibold" style={{ color: "#171412", letterSpacing: "0.08em", textTransform: "uppercase" }}>
               {pageTitle}
             </div>
           </div>
@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link
             href="/upload"
             className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl border"
-            style={{ borderColor: "#ddd4c5", background: "rgba(255,253,248,0.9)", color: "#194e56" }}
+            style={{ borderColor: "#d7cebf", background: "#fbf7f1", color: "#171412" }}
             aria-label="Go to upload"
           >
             <Scissors className="h-4 w-4" />
@@ -65,12 +65,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <main
-        className={`flex flex-1 justify-center ${showSidebar ? "pt-[68px] lg:ml-[var(--sidebar-w)] lg:pt-0" : ""}`}
+        className={`min-h-screen w-full ${showSidebar ? "pt-[68px] lg:pl-[var(--sidebar-w)] lg:pt-0" : ""}`}
         style={{
-          minHeight: "100vh",
-          background: showSidebar
-            ? "linear-gradient(180deg, rgba(255,253,248,0.82), rgba(244,240,232,0.96))"
-            : "transparent",
+          background: "transparent",
         }}
       >
         {children}

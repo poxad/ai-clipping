@@ -30,11 +30,11 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
       {/* Header */}
       <div
         className="mb-5 flex flex-col items-start justify-between gap-4 rounded-2xl p-4 sm:flex-row"
-        style={{ background: "#ffffff", border: "1px solid #e4e1da", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        style={{ background: "#fbf7f1", border: "1px solid #d7cebf", boxShadow: "none" }}
       >
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold" style={{ color: "#1c1917" }}>
+            <h2 className="text-base font-semibold" style={{ color: "#171412" }}>
               {clips.length} Clip{clips.length !== 1 ? "s" : ""} Ready
             </h2>
             <span
@@ -44,7 +44,7 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
               ✓ Done
             </span>
           </div>
-          <p className="text-xs mt-1" style={{ color: "#9e9b94" }}>
+          <p className="text-xs mt-1" style={{ color: "#83786c" }}>
             Tap to preview · Tap again to fullscreen · Tap the pencil to edit subtitles
           </p>
         </div>
@@ -54,9 +54,9 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
               onClick={() => setSortByScore((v) => !v)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
               style={{
-                background: sortByScore ? "rgba(109,40,217,0.08)" : "#f7f6f3",
-                border: `1px solid ${sortByScore ? "rgba(109,40,217,0.3)" : "#e4e1da"}`,
-                color: sortByScore ? "#6d28d9" : "#706d67",
+                background: sortByScore ? "rgba(184,84,48,0.08)" : "#f7f1e7",
+                border: `1px solid ${sortByScore ? "rgba(184,84,48,0.2)" : "#d7cebf"}`,
+                color: sortByScore ? "#b85430" : "#5e554d",
               }}
             >
               <Star className="w-3.5 h-3.5" />
@@ -66,14 +66,14 @@ export function ClipsGrid({ clips, jobId, onReset, onSchedule }: Props) {
           <button
             onClick={onReset}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
-            style={{ background: "#f7f6f3", color: "#706d67", border: "1px solid #e4e1da" }}
+            style={{ background: "#f7f1e7", color: "#5e554d", border: "1px solid #d7cebf" }}
           >
             <RotateCcw className="w-3.5 h-3.5" /> New Upload
           </button>
           <a
             href={downloadAllUrl(jobId)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #6d28d9, #e11d48)", color: "white", boxShadow: "0 2px 8px rgba(109,40,217,0.25)" }}
+            style={{ background: "#171412", color: "#f7f1e7", boxShadow: "none" }}
           >
             <Download className="w-3.5 h-3.5" /> Download All
           </a>

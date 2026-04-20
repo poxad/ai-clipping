@@ -58,9 +58,9 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
   }
 
   const inputStyle = {
-    background: "#ffffff",
-    border: "1px solid #e4e1da",
-    color: "#1c1917",
+    background: "#fbf7f1",
+    border: "1px solid #d7cebf",
+    color: "#171412",
     borderRadius: 8,
     padding: "8px 12px",
     fontSize: 13,
@@ -71,7 +71,7 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
   const labelStyle = {
     fontSize: 11,
     fontWeight: 600,
-    color: "#9e9b94",
+    color: "#83786c",
     textTransform: "uppercase" as const,
     letterSpacing: "0.05em",
     display: "block",
@@ -83,9 +83,9 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
       {/* Clip preview */}
       <div
         className="flex items-center gap-3 mb-5 px-3 py-2.5 rounded-lg"
-        style={{ background: "#f7f6f3", border: "1px solid #e4e1da" }}
+        style={{ background: "#f7f1e7", border: "1px solid #d7cebf" }}
       >
-        <span className="text-xs font-mono font-medium" style={{ color: "#6d28d9" }}>
+        <span className="text-xs font-mono font-medium" style={{ color: "#b85430" }}>
           {clip.name || `Clip #${clip.index}`}
         </span>
         {clip.score != null && (
@@ -94,16 +94,16 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
           </span>
         )}
         {clip.clip_type && (
-          <span className="text-xs" style={{ color: "#9e9b94" }}>{clip.clip_type}</span>
+          <span className="text-xs" style={{ color: "#83786c" }}>{clip.clip_type}</span>
         )}
       </div>
 
       {clip.caption && (
         <div
           className="mb-5 px-3 py-2.5 rounded-lg text-xs"
-          style={{ background: "#f7f6f3", border: "1px solid #e4e1da", color: "#1c1917", lineHeight: 1.6 }}
+          style={{ background: "#f7f1e7", border: "1px solid #d7cebf", color: "#171412", lineHeight: 1.6 }}
         >
-          <div className="text-xs font-semibold mb-1" style={{ color: "#9e9b94" }}>CAPTION</div>
+          <div className="text-xs font-semibold mb-1" style={{ color: "#83786c" }}>CAPTION</div>
           {clip.caption}
         </div>
       )}
@@ -118,11 +118,11 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
       )}
 
       {loadingAccounts ? (
-        <p className="text-xs text-center py-4" style={{ color: "#9e9b94" }}>Loading accounts…</p>
+        <p className="text-xs text-center py-4" style={{ color: "#83786c" }}>Loading accounts…</p>
       ) : accounts.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-sm mb-2" style={{ color: "#706d67" }}>No TikTok accounts connected.</p>
-          <a href="/scheduler" className="text-xs font-semibold" style={{ color: "#6d28d9" }}>
+          <p className="text-sm mb-2" style={{ color: "#5e554d" }}>No TikTok accounts connected.</p>
+          <a href="/scheduler" className="text-xs font-semibold" style={{ color: "#b85430" }}>
             → Connect an account in Scheduler
           </a>
         </div>
@@ -155,7 +155,7 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
               type="button"
               onClick={onClose}
               className="flex-1 py-2.5 rounded-lg text-sm font-medium"
-              style={{ background: "#f7f6f3", border: "1px solid #e4e1da", color: "#706d67" }}
+              style={{ background: "#f7f1e7", border: "1px solid #d7cebf", color: "#5e554d" }}
             >
               Cancel
             </button>
@@ -163,7 +163,7 @@ export function ScheduleModal({ clip, jobId, onClose, onScheduled }: Props) {
               type="submit"
               disabled={loading || !accountId}
               className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #6d28d9, #e11d48)", color: "white" }}
+              style={{ background: "#171412", color: "#f7f1e7" }}
             >
               {loading ? "Scheduling…" : "Schedule"}
             </button>

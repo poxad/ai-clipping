@@ -18,6 +18,7 @@ from typing import List, Optional, Tuple
 
 from .transcriber import WordSegment
 from . import config
+from .reframer import ReframePlan, ReframeSample
 
 
 # ---------------------------------------------------------------------------
@@ -257,14 +258,13 @@ def create_clip_video(
     input_video: str,
     clip: Clip,
     output_path: str,
-    crop_filter: Optional[str] = None,
+    reframe_plan: Optional[ReframePlan] = None,
     style: Optional[dict] = None,
 ) -> bool:
     """
     Render a clip to output_path with jump cuts and burned-in subtitles.
 
-    crop_filter: optional FFmpeg crop expression e.g. "crop=607:1080:400:0"
-                 applied when input is landscape and needs reframing to 9:16.
+    reframe_plan: optional active-speaker reframing plan for landscape input.
     """
     padding = config.JUMP_CUT_PADDING
     trailing_pad = 0.4  # extra breathing room at the end so clip doesn't feel cut off
@@ -285,9 +285,9 @@ def create_clip_video(
     try:
         try:
             if len(merged) == 1:
-                _ffmpeg_trim(input_video, merged[0][0], merged[0][1], tmp_path, crop_filter)
+                _ffmpeg_trim(input_video, merged[0][0], merged[0][1], tmp_path, reframe_plan)
             else:
-                _ffmpeg_concat(input_video, merged, tmp_path, crop_filter)
+                _ffmpeg_concat(input_video, merged, tmp_path, reframe_plan)
         except RuntimeError as e:
             print(f"[CLIPPER] FFmpeg render failed for {os.path.basename(output_path)}: {e}")
             return False
@@ -363,6 +363,125 @@ def _compose_video_filter(base_filter: Optional[str] = None) -> str:
         f"pad={_OUTPUT_W}:{_OUTPUT_H}:(ow-iw)/2:(oh-ih)/2"
     )
     return ",".join(filters)
+
+
+def _sample_crop_x(plan: ReframePlan, time_point: float) -> float:
+    if not plan.samples:
+        return plan.default_crop_x
+    if time_point <= plan.samples[0].time:
+        return plan.samples[0].crop_x
+    if time_point >= plan.samples[-1].time:
+        return plan.samples[-1].crop_x
+
+    for idx in range(1, len(plan.samples)):
+        prev = plan.samples[idx - 1]
+        curr = plan.samples[idx]
+        if time_point <= curr.time:
+            dt = max(0.001, curr.time - prev.time)
+            alpha = (time_point - prev.time) / dt
+            return prev.crop_x + alpha * (curr.crop_x - prev.crop_x)
+    return plan.samples[-1].crop_x
+
+
+def _segment_samples(plan: ReframePlan, start: float, end: float) -> List[ReframeSample]:
+    selected = [sample for sample in plan.samples if start <= sample.time <= end]
+    if selected:
+        return selected
+    return [
+        ReframeSample(time=start, crop_x=_sample_crop_x(plan, start), confidence=0.0, face_count=0),
+        ReframeSample(time=end, crop_x=_sample_crop_x(plan, end), confidence=0.0, face_count=0),
+    ]
+
+
+def _clamp_crop_x(plan: ReframePlan, crop_x: float) -> float:
+    return max(0.0, min(float(plan.src_width - plan.crop_width), crop_x))
+
+
+def _weighted_average(values: List[float], weights: List[float]) -> float:
+    total = sum(weights)
+    if total <= 0:
+        return sum(values) / max(1, len(values))
+    return sum(value * weight for value, weight in zip(values, weights)) / total
+
+
+def _static_segment_crop_x(plan: ReframePlan, start: float, end: float) -> Optional[float]:
+    samples = _segment_samples(plan, start, end)
+    values = [sample.crop_x for sample in samples]
+    weights = [0.7 + sample.confidence for sample in samples]
+    stable_x = _clamp_crop_x(plan, _weighted_average(values, weights))
+
+    max_dev = max(abs(value - stable_x) for value in values)
+    avg_conf = sum(sample.confidence for sample in samples) / max(1, len(samples))
+    duration = max(0.0, end - start)
+
+    if avg_conf < 0.24:
+        return stable_x
+    if max_dev <= plan.crop_width * 0.16:
+        return stable_x
+    if duration <= 12.0 and max_dev <= plan.crop_width * 0.22:
+        return stable_x
+    return None
+
+
+def _build_segment_keyframes(plan: ReframePlan, start: float, end: float) -> List[Tuple[float, float]]:
+    duration = max(0.0, end - start)
+    if duration <= 0:
+        return [(0.0, plan.default_crop_x)]
+
+    selected: List[Tuple[float, float]] = []
+    start_x = _sample_crop_x(plan, start)
+    end_x = _sample_crop_x(plan, end)
+    selected.append((0.0, start_x))
+
+    for sample in plan.samples:
+        if start < sample.time < end:
+            selected.append((sample.time - start, sample.crop_x))
+
+    selected.append((duration, end_x))
+
+    compressed: List[Tuple[float, float]] = [selected[0]]
+    for local_t, crop_x in selected[1:-1]:
+        prev_t, prev_x = compressed[-1]
+        if local_t - prev_t >= 0.90 or abs(crop_x - prev_x) >= 28.0:
+            compressed.append((local_t, crop_x))
+    if selected[-1][0] > compressed[-1][0]:
+        compressed.append(selected[-1])
+    return compressed
+
+
+def _build_crop_expr(keyframes: List[Tuple[float, float]]) -> str:
+    if not keyframes:
+        return "0"
+    if len(keyframes) == 1:
+        return f"{keyframes[0][1]:.2f}"
+
+    expr = f"{keyframes[-1][1]:.2f}"
+    for idx in range(len(keyframes) - 2, -1, -1):
+        t0, x0 = keyframes[idx]
+        t1, x1 = keyframes[idx + 1]
+        dt = max(0.001, t1 - t0)
+        segment_expr = f"{x0:.2f}+({x1:.2f}-{x0:.2f})*(t-{t0:.3f})/{dt:.3f}"
+        expr = f"if(lt(t,{t1:.3f}),{segment_expr},{expr})"
+    return expr.replace(",", r"\,")
+
+
+def _segment_crop_filter(
+    reframe_plan: Optional[ReframePlan],
+    start: float,
+    end: float,
+) -> Optional[str]:
+    if not reframe_plan:
+        return None
+
+    static_crop_x = _static_segment_crop_x(reframe_plan, start, end)
+    keyframes = _build_segment_keyframes(reframe_plan, start, end)
+    crop_w = reframe_plan.crop_width
+    crop_h = reframe_plan.crop_height
+    if static_crop_x is not None:
+        return f"crop={crop_w}:{crop_h}:{static_crop_x:.2f}:0"
+
+    expr = _build_crop_expr(keyframes)
+    return f"crop={crop_w}:{crop_h}:{expr}:0"
 
 
 # ---------------------------------------------------------------------------
@@ -487,6 +606,17 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             return word_str.lower()
         return word_str
 
+    def _escape_ass_text(text: str) -> str:
+        # ASS treats braces as override blocks and backslashes as escape
+        # prefixes, so literal transcript text must be sanitized.
+        return (
+            text.replace("\\", r"\\")
+            .replace("{", r"\{")
+            .replace("}", r"\}")
+            .replace("\n", " ")
+            .replace("\r", " ")
+        )
+
     chars_per_line = max(8, int(PLAY_W / (fontsize * 0.65)))
 
     def _flush(grp: list) -> None:
@@ -496,7 +626,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         end = grp[-1].end
         if end <= start:
             end = start + 0.3
-        text = " ".join(_apply_case(word.word) for word in grp)
+        text = _escape_ass_text(" ".join(_apply_case(word.word) for word in grp))
         lines.append(
             f"Dialogue: 0,{_time_to_ass(start)},{_time_to_ass(end)},Default,,0,0,0,,{text}"
         )
@@ -562,10 +692,10 @@ def _burn_ass(input_path: str, ass_path: str, output_path: str) -> bool:
 
 def _ffmpeg_trim(
     input_video: str, start: float, end: float, output_path: str,
-    crop_filter: Optional[str] = None,
+    reframe_plan: Optional[ReframePlan] = None,
 ):
     print(f"[FFMPEG] trim {start:.1f}s–{end:.1f}s → {os.path.basename(output_path)}")
-    vf = _compose_video_filter(crop_filter)
+    vf = _compose_video_filter(_segment_crop_filter(reframe_plan, start, end))
     cmd = [
         config.FFMPEG_BIN, "-y",
         "-ss", f"{start:.3f}",
@@ -580,14 +710,14 @@ def _ffmpeg_trim(
 
 def _ffmpeg_concat(
     input_video: str, segments: List[Tuple[float, float]], output_path: str,
-    crop_filter: Optional[str] = None,
+    reframe_plan: Optional[ReframePlan] = None,
 ):
     """Build filter_complex to concat multiple video+audio segments."""
     print(f"[FFMPEG] concat {len(segments)} segments → {os.path.basename(output_path)}")
     filter_parts = []
-    video_chain = _compose_video_filter(crop_filter)
 
     for i, (start, end) in enumerate(segments):
+        video_chain = _compose_video_filter(_segment_crop_filter(reframe_plan, start, end))
         filter_parts.append(
             f"[0:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,{video_chain}[v{i}]"
         )
@@ -638,12 +768,12 @@ def _map_global_to_local(global_start: float, global_end: float, sources: list) 
     # Find the video that contains the midpoint of the segment to avoid boundary edge cases
     midpoint = (global_start + global_end) / 2.0
     best_idx = 0
-    for idx, (path, offset, duration, crop) in enumerate(sources):
+    for idx, (path, offset, duration, reframe_plan) in enumerate(sources):
         if offset <= midpoint <= offset + duration:
             best_idx = idx
             break
             
-    path, offset, duration, crop = sources[best_idx]
+    path, offset, duration, reframe_plan = sources[best_idx]
     
     local_start = max(0.0, global_start - offset)
     local_end = global_end - offset
@@ -652,7 +782,7 @@ def _map_global_to_local(global_start: float, global_end: float, sources: list) 
     local_start = min(local_start, max(0.0, duration - 0.1))
     local_end = max(local_start + 0.1, min(local_end, duration))
     
-    return best_idx, path, local_start, local_end, crop
+    return best_idx, path, local_start, local_end, reframe_plan
 
 
 def _merge_multisource_segments(segments: list) -> list:
@@ -673,9 +803,9 @@ def _ffmpeg_multisource_concat(segments: list, output_path: str):
     cmd = [config.FFMPEG_BIN, "-y"]
     filter_parts = []
     
-    for i, (idx, path, start, end, crop_filter) in enumerate(segments):
+    for i, (idx, path, start, end, reframe_plan) in enumerate(segments):
         cmd.extend(["-i", path])
-        video_chain = _compose_video_filter(crop_filter)
+        video_chain = _compose_video_filter(_segment_crop_filter(reframe_plan, start, end))
         filter_parts.append(
             f"[{i}:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,{video_chain}[v{i}]"
         )
@@ -719,8 +849,8 @@ def create_multisource_clip_video(
     try:
         try:
             if len(merged) == 1:
-                idx, path, start, end, crop = merged[0]
-                _ffmpeg_trim(path, start, end, tmp_path, crop)
+                idx, path, start, end, reframe_plan = merged[0]
+                _ffmpeg_trim(path, start, end, tmp_path, reframe_plan)
             else:
                 _ffmpeg_multisource_concat(merged, tmp_path)
         except RuntimeError as e:

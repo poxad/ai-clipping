@@ -35,7 +35,7 @@ export interface StylePayload {
   alignment?: "left" | "center" | "right";
   text_case: "none" | "uppercase" | "lowercase";
   margin_v: number;
-  content_type?: "retail" | "podcast";
+  content_type?: "retail" | "podcast" | "general";
   whisper_prompt?: string;
 }
 

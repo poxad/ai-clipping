@@ -19,10 +19,10 @@ export function BatchPreview({ files, onClear, onUpload, uploading }: Props) {
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ border: "1px solid #e4e1da", background: "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+      style={{ border: "1px solid #d7cebf", background: "#fbf7f1" }}
     >
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid #e4e1da", background: "#f7f6f3" }}>
-        <span className="text-sm font-semibold" style={{ color: "#1c1917" }}>
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid #d7cebf", background: "#f7f1e7" }}>
+        <span className="text-sm font-semibold" style={{ color: "#171412" }}>
           {files.length} video{files.length !== 1 ? "s" : ""} selected
         </span>
       </div>
@@ -31,23 +31,23 @@ export function BatchPreview({ files, onClear, onUpload, uploading }: Props) {
           <div
             key={i}
             className="flex items-start justify-between gap-3 px-4 py-2.5"
-            style={{ borderBottom: i < files.length - 1 ? "1px solid #f0ede8" : undefined }}
+            style={{ borderBottom: i < files.length - 1 ? "1px solid #f0e7d8" : undefined }}
           >
-            <span className="min-w-0 flex-1 text-sm break-words" style={{ color: "#1c1917" }}>
+            <span className="min-w-0 flex-1 text-sm break-words" style={{ color: "#171412" }}>
               {f.name}
             </span>
-            <span className="text-xs ml-2 flex-shrink-0 tabular-nums" style={{ color: "#9e9b94" }}>
+            <span className="text-xs ml-2 flex-shrink-0 tabular-nums font-mono" style={{ color: "#83786c" }}>
               {formatSize(f.size)}
             </span>
           </div>
         ))}
       </div>
-      <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:justify-end" style={{ borderTop: "1px solid #e4e1da" }}>
+      <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:justify-end" style={{ borderTop: "1px solid #d7cebf" }}>
         <button
           onClick={onClear}
           disabled={uploading}
           className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all"
-          style={{ color: "#706d67", border: "1px solid #e4e1da", background: "#ffffff" }}
+          style={{ color: "#5e554d", border: "1px solid #d7cebf", background: "#fbf7f1" }}
         >
           <X className="w-3.5 h-3.5" /> Clear
         </button>
@@ -56,8 +56,8 @@ export function BatchPreview({ files, onClear, onUpload, uploading }: Props) {
           disabled={uploading}
           className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
           style={{
-            background: "linear-gradient(135deg, #6d28d9, #e11d48)",
-            color: "white",
+            background: "#171412",
+            color: "#f7f1e7",
             opacity: uploading ? 0.6 : 1,
           }}
         >

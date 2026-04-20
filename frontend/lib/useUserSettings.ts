@@ -4,12 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "./supabase";
 
 export interface SavedProcessingSettings {
-  contentType?: "retail" | "podcast";
+  contentType?: "retail" | "podcast" | "general";
   whisperVocab?: string;
 }
 
 interface UserSettingsRow {
-  content_type?: "retail" | "podcast" | null;
+  content_type?: "retail" | "podcast" | "general" | null;
   whisper_vocab?: string | null;
 }
 
