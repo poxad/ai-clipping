@@ -635,6 +635,29 @@ def compose_story_clips(utterances_data: List[Dict[str, Any]], content_type: str
     return all_results
 
 
+_CLIP_TYPE_FALLBACK_CAPTIONS: Dict[str, str] = {
+    "EXPERTISE":      "Tips keren dari kami buat kamu! 💡 #Kacamatamoo #SahabatMatamoo",
+    "TRANSFORMATION": "Transformasi yang bikin kaget! ✨ #Kacamatamoo #SahabatMatamoo",
+    "REACTION":       "Reaksi yang nggak terduga! 😲 #Kacamatamoo #SahabatMatamoo",
+    "STORY":          "Momen berharga bersama pelanggan ❤️ #Kacamatamoo #SahabatMatamoo",
+    "SATISFYING":     "Pelayanan terbaik untuk kamu! 🙌 #Kacamatamoo #SahabatMatamoo",
+}
+
+
+def ensure_caption(caption: str, clip_type: str = "", summary: str = "") -> str:
+    """Return caption if non-empty, else derive a safe fallback from available data."""
+    if caption and caption.strip():
+        return caption.strip()
+    if summary and summary.strip():
+        first = summary.strip().split(".")[0].strip()
+        if first:
+            return f"{first} ✨ #Kacamatamoo #SahabatMatamoo"
+    return _CLIP_TYPE_FALLBACK_CAPTIONS.get(
+        clip_type.upper(),
+        "Momen spesial hari ini! ✨ #Kacamatamoo #SahabatMatamoo",
+    )
+
+
 def _overlaps_existing(new_ids: List[int], existing: List[Dict], threshold: float = 0.5) -> bool:
     """Return True if new_ids shares >= threshold fraction of IDs with any existing clip."""
     new_set = set(new_ids)

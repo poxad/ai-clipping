@@ -19,7 +19,6 @@ from typing import Dict, List, Optional, Tuple
 try:
     import cv2
     import mediapipe as mp
-    import numpy as np
     _CV2_AVAILABLE = True
 except ImportError:
     _CV2_AVAILABLE = False
@@ -126,7 +125,20 @@ def _analyze_landscape_video(
     with mp.solutions.face_detection.FaceDetection(
         min_detection_confidence=0.5,
         model_selection=0,
-    ) as detector:
+    ) as detector, mp.solutions.face_mesh.FaceMesh(
+        static_image_mode=False,
+        max_num_faces=4,
+        refine_landmarks=False,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+    ) as face_mesh, mp.solutions.pose.Pose(
+        static_image_mode=False,
+        model_complexity=1,
+        smooth_landmarks=True,
+        enable_segmentation=False,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+    ) as pose_tracker:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -137,11 +149,18 @@ def _analyze_landscape_video(
                 continue
 
             time_sec = frame_idx / fps
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = detector.process(rgb)
-            detections = _extract_faces(results, width, height)
-            assigned, next_track_id = _assign_tracks(detections, tracks, gray, time_sec, next_track_id)
+            face_results = detector.process(rgb)
+            mesh_results = face_mesh.process(rgb)
+            pose_results = pose_tracker.process(rgb)
+
+            detections = _extract_faces(face_results, width, height)
+            _attach_face_mesh(detections, mesh_results, width, height)
+            pose_subject = _extract_pose_subject(pose_results, width, height)
+            if pose_subject:
+                _attach_pose_subject(detections, pose_subject)
+
+            assigned, next_track_id = _assign_tracks(detections, tracks, time_sec, next_track_id)
             crop_x, confidence, active_track_id = _choose_crop_target(
                 assigned,
                 tracks,
@@ -192,10 +211,109 @@ def _extract_faces(results, width: int, height: int) -> List[dict]:
     return faces
 
 
+def _attach_face_mesh(detections: List[dict], mesh_results, width: int, height: int) -> None:
+    if not detections or not mesh_results or not mesh_results.multi_face_landmarks:
+        return
+
+    mesh_faces = []
+    for landmarks in mesh_results.multi_face_landmarks:
+        xs = [lm.x * width for lm in landmarks.landmark]
+        ys = [lm.y * height for lm in landmarks.landmark]
+        x0 = max(0.0, min(xs))
+        x1 = min(float(width), max(xs))
+        y0 = max(0.0, min(ys))
+        y1 = min(float(height), max(ys))
+        mouth_open = _mouth_open_ratio(landmarks, width, height)
+        mesh_faces.append(
+            {
+                "bbox": (x0, y0, x1, y1),
+                "center_x": (x0 + x1) / 2.0 / width,
+                "mouth_open": mouth_open,
+            }
+        )
+
+    used_mesh = set()
+    for det in detections:
+        best_idx = None
+        best_score = 999.0
+        det_center = det["center_x"]
+        det_box = det["bbox"]
+        for idx, mesh_face in enumerate(mesh_faces):
+            if idx in used_mesh:
+                continue
+            score = abs(det_center - mesh_face["center_x"]) + 0.5 * (1.0 - _bbox_iou(det_box, mesh_face["bbox"]))
+            if score < best_score:
+                best_score = score
+                best_idx = idx
+
+        if best_idx is not None and best_score < 0.55:
+            used_mesh.add(best_idx)
+            det["mouth_open"] = mesh_faces[best_idx]["mouth_open"]
+            det["mesh_bbox"] = mesh_faces[best_idx]["bbox"]
+
+
+def _extract_pose_subject(pose_results, width: int, height: int) -> Optional[dict]:
+    if not pose_results or not pose_results.pose_landmarks:
+        return None
+
+    lm = pose_results.pose_landmarks.landmark
+    points = []
+    for idx in (0, 7, 8, 11, 12, 23, 24):
+        landmark = lm[idx]
+        if landmark.visibility < 0.45:
+            continue
+        points.append((landmark.x * width, landmark.y * height))
+
+    if len(points) < 3:
+        return None
+
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    x0 = max(0.0, min(xs))
+    x1 = min(float(width), max(xs))
+    y0 = max(0.0, min(ys))
+    y1 = min(float(height), max(ys))
+
+    shoulder_points = []
+    for idx in (11, 12):
+        landmark = lm[idx]
+        if landmark.visibility >= 0.45:
+            shoulder_points.append((landmark.x * width, landmark.y * height))
+
+    shoulder_span = 0.0
+    if len(shoulder_points) == 2:
+        shoulder_span = abs(shoulder_points[1][0] - shoulder_points[0][0])
+
+    box_w = max(1.0, x1 - x0)
+    head_pad = max(box_w * 0.18, shoulder_span * 0.18)
+    side_pad = max(box_w * 0.22, shoulder_span * 0.35)
+    bottom_pad = max(box_w * 0.24, shoulder_span * 0.30)
+
+    subject_bounds = (
+        max(0.0, x0 - side_pad),
+        max(0.0, y0 - head_pad),
+        min(float(width), x1 + side_pad),
+        min(float(height), y1 + bottom_pad),
+    )
+    return {
+        "bounds": subject_bounds,
+        "center_x": ((subject_bounds[0] + subject_bounds[2]) / 2.0) / width,
+    }
+
+
+def _attach_pose_subject(detections: List[dict], pose_subject: dict) -> None:
+    if not detections:
+        return
+
+    for det in detections:
+        det_center = det["center_x"]
+        if abs(det_center - pose_subject["center_x"]) <= 0.18:
+            det["subject_bounds"] = pose_subject["bounds"]
+
+
 def _assign_tracks(
     detections: List[dict],
     tracks: Dict[int, dict],
-    gray_frame,
     time_sec: float,
     next_track_id: int,
 ) -> Tuple[List[dict], int]:
@@ -232,16 +350,15 @@ def _assign_tracks(
                 "area": area,
                 "last_seen": time_sec,
                 "motion_ema": 0.0,
-                "mouth_roi": None,
+                "mouth_open": det.get("mouth_open"),
             }
             tracks[track_id] = track
 
-        mouth_roi = _extract_mouth_roi(gray_frame, det["bbox"])
-        motion = _estimate_mouth_motion(track.get("mouth_roi"), mouth_roi)
+        motion = _estimate_mouth_motion(track.get("mouth_open"), det.get("mouth_open"))
         track["center_x"] = center_x
         track["area"] = area
         track["last_seen"] = time_sec
-        track["mouth_roi"] = mouth_roi
+        track["mouth_open"] = det.get("mouth_open")
         track["motion_ema"] = 0.65 * track.get("motion_ema", 0.0) + 0.35 * motion
         used_tracks.add(track_id)
 
@@ -256,32 +373,21 @@ def _assign_tracks(
     return assigned, next_track_id
 
 
-def _extract_mouth_roi(gray_frame, bbox: Tuple[int, int, int, int]):
-    x0, y0, x1, y1 = bbox
-    w = x1 - x0
-    h = y1 - y0
-    if w < 8 or h < 8:
-        return None
+def _mouth_open_ratio(landmarks, width: int, height: int) -> float:
+    upper_lip = landmarks.landmark[13]
+    lower_lip = landmarks.landmark[14]
+    left_corner = landmarks.landmark[78]
+    right_corner = landmarks.landmark[308]
 
-    mx0 = x0 + int(w * 0.2)
-    mx1 = x1 - int(w * 0.2)
-    my0 = y0 + int(h * 0.58)
-    my1 = y0 + int(h * 0.9)
-    if mx1 <= mx0 or my1 <= my0:
-        return None
-
-    roi = gray_frame[my0:my1, mx0:mx1]
-    if roi.size == 0:
-        return None
-    return cv2.resize(roi, (32, 16))
+    mouth_h = abs(lower_lip.y - upper_lip.y) * height
+    mouth_w = max(1.0, abs(right_corner.x - left_corner.x) * width)
+    return max(0.0, min(1.0, mouth_h / mouth_w * 4.2))
 
 
-def _estimate_mouth_motion(prev_roi, curr_roi) -> float:
-    if prev_roi is None or curr_roi is None:
+def _estimate_mouth_motion(prev_open: Optional[float], curr_open: Optional[float]) -> float:
+    if prev_open is None or curr_open is None:
         return 0.0
-    diff = cv2.absdiff(prev_roi, curr_roi)
-    score = float(diff.mean()) / 255.0
-    return max(0.0, min(1.0, score * 3.0))
+    return max(0.0, min(1.0, abs(curr_open - prev_open) * 6.5))
 
 
 def _choose_crop_target(
@@ -318,7 +424,7 @@ def _choose_crop_target(
     confidence = max(0.0, min(1.0, best_face["motion"] * 1.7 + max(0.0, best_score - max(second_score, 0.0))))
     if confidence < 0.18:
         fallback_crops = [
-            _subject_crop_x(face["bbox"], width, crop_width)
+            _subject_crop_x(face, width, crop_width)
             for face in assigned
         ]
         weighted_subject_crop = sum(crop * face["area"] for crop, face in zip(fallback_crops, assigned)) / max(
@@ -326,7 +432,7 @@ def _choose_crop_target(
         )
         return weighted_subject_crop, confidence, best_face["track_id"]
 
-    speaker_crop = _subject_crop_x(best_face["bbox"], width, crop_width)
+    speaker_crop = _subject_crop_x(best_face, width, crop_width)
     return speaker_crop, confidence, best_face["track_id"]
 
 
@@ -387,14 +493,16 @@ def _center_to_crop_x(center_x_norm: float, width: int, crop_width: int) -> floa
     return float(max(0, min(face_px - crop_width / 2, width - crop_width)))
 
 
-def _subject_crop_x(bbox: Tuple[int, int, int, int], width: int, crop_width: int) -> float:
-    x0, _, x1, _ = bbox
-    face_w = max(1.0, float(x1 - x0))
+def _subject_crop_x(face: dict, width: int, crop_width: int) -> float:
+    subject_bounds = face.get("subject_bounds")
+    if subject_bounds:
+        subject_left, _, subject_right, _ = subject_bounds
+    else:
+        x0, _, x1, _ = face.get("mesh_bbox") or face["bbox"]
+        face_w = max(1.0, float(x1 - x0))
+        subject_left = max(0.0, x0 - face_w * 1.45)
+        subject_right = min(float(width), x1 + face_w * 1.45)
 
-    # Approximate an upper-body framing zone from the detected face so the
-    # crop keeps more of the speaker than just a centered face.
-    subject_left = max(0.0, x0 - face_w * 1.15)
-    subject_right = min(float(width), x1 + face_w * 1.15)
     safe_margin = crop_width * 0.08
 
     min_crop_x = max(0.0, subject_right + safe_margin - crop_width)
@@ -411,6 +519,23 @@ def _safe_area_ratio(a: float, b: float) -> float:
     if a <= 0 or b <= 0:
         return 1.0
     return a / b
+
+
+def _bbox_iou(a: Tuple[int, int, int, int], b: Tuple[float, float, float, float]) -> float:
+    ax0, ay0, ax1, ay1 = a
+    bx0, by0, bx1, by1 = b
+    inter_x0 = max(float(ax0), bx0)
+    inter_y0 = max(float(ay0), by0)
+    inter_x1 = min(float(ax1), bx1)
+    inter_y1 = min(float(ay1), by1)
+    if inter_x1 <= inter_x0 or inter_y1 <= inter_y0:
+        return 0.0
+
+    inter = (inter_x1 - inter_x0) * (inter_y1 - inter_y0)
+    area_a = max(1.0, float((ax1 - ax0) * (ay1 - ay0)))
+    area_b = max(1.0, float((bx1 - bx0) * (by1 - by0)))
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
 
 
 def _decay_old_tracks(tracks: Dict[int, dict], now: float) -> None:

@@ -176,7 +176,7 @@ async def _process_single_video(
 
         _update_job(job_id, progress=progress_base + int(span * 0.44),
                     message=f"AI composing story clips from {len(utterances)} utterances...")
-        from .llm import compose_story_clips
+        from .llm import compose_story_clips, ensure_caption
         utt_data = [
             {"id": i, "text": u.text, "duration": round(u.duration, 2), "start": round(u.start, 1)}
             for i, u in enumerate(utterances)
@@ -346,7 +346,7 @@ async def _process_single_video(
                     "source": source_name,
                     "score": story.get("score"),
                     "score_summary": story.get("summary", ""),
-                    "caption": story.get("caption", ""),
+                    "caption": ensure_caption(story.get("caption", ""), story.get("clip_type", ""), story.get("summary", "")),
                     "clip_type": story.get("clip_type", ""),
                     "score_metrics": {},
                 }
@@ -921,7 +921,7 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
 
         _update_job(job_id, status="clipping", progress=38,
                     message=f"AI composing story clips from {len(utterances)} utterances...")
-        from .llm import compose_story_clips
+        from .llm import compose_story_clips, ensure_caption
         utt_data = [
             {"id": i, "text": u.text, "duration": round(u.duration, 2), "start": round(u.start, 1)}
             for i, u in enumerate(utterances)
@@ -1056,7 +1056,7 @@ async def _reprocess_video(job_id: str, source_job_id: str, style_dict: Optional
                     "source": filename,
                     "score": story.get("score"),
                     "score_summary": story.get("summary", ""),
-                    "caption": story.get("caption", ""),
+                    "caption": ensure_caption(story.get("caption", ""), story.get("clip_type", ""), story.get("summary", "")),
                     "score_metrics": {},
                 }
                 generated.append(clip_payload)
