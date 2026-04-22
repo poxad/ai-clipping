@@ -193,6 +193,26 @@ SELECTION RULES
 ❌ Skip: utterances > 8 seconds unless they contain the emotional peak
 
 ═══════════════════════════════════════
+COVERAGE REQUIREMENT — find ALL 4 pillars
+═══════════════════════════════════════
+Before you output anything, scan the ENTIRE transcript and check for these 4 pillars.
+If a pillar exists, you MUST produce at least one clip featuring it.
+
+  [PILLAR 1: HOOK]       → A bold claim, surprising question, or strong opener that grabs cold viewers.
+                            Look for: "nobody talks about...", direct controversial takes, high-stakes setups.
+
+  [PILLAR 2: INSIGHT]    → The core expertise, key idea, or knowledge moment of the conversation.
+                            Look for: surprising facts, counterintuitive advice, expert takes, "the truth is...".
+
+  [PILLAR 3: EMOTION]    → A genuine emotional peak: laughter, vulnerability, heated debate, breakthrough moment.
+                            Look for: laughter, personal confession, strong disagreement, emotional reveal.
+
+  [PILLAR 4: TAKEAWAY]   → A memorable closing line, actionable advice, or quotable punchline.
+                            Look for: "so the lesson is...", direct call-to-action, punchy final summary.
+
+If a pillar is ABSENT from the transcript, skip it. If present but weak, still produce a clip (score 4.0–5.0) — let the user decide.
+
+═══════════════════════════════════════
 SCORING
 ═══════════════════════════════════════
 9–10: Stand-alone viral. Stranger will watch, share, and subscribe.
@@ -239,6 +259,22 @@ SELECTION RULES
 ✅ Use time gaps and topic shifts to separate clips
 ❌ Skip filler, rambling transitions, repetitive setup, low-information chatter, incomplete fragments unless the emotion itself is the payoff
 ❌ Do not force a clip when the utterances do not resolve into a coherent short-form moment
+
+═══════════════════════════════════════
+COVERAGE REQUIREMENT — find ALL 4 pillars
+═══════════════════════════════════════
+Before you output anything, scan the ENTIRE transcript and check for these 4 pillars.
+If a pillar exists, you MUST produce at least one clip featuring it.
+
+  [PILLAR 1: HOOK]       → Any moment that stops a cold viewer: bold claim, surprise, curiosity gap, immediate payoff.
+
+  [PILLAR 2: SUBSTANCE]  → The core content — the explanation, demo, story body, or main idea worth watching for.
+
+  [PILLAR 3: PEAK]       → Emotional or narrative high point: reaction, laugh, reveal, twist, or "wow" moment.
+
+  [PILLAR 4: CLOSE]      → Satisfying payoff, result, conclusion, or final punchline that gives closure.
+
+If a pillar is ABSENT, skip it. If present but weak (score 4.0–5.0), still include it — let the user decide.
 
 ═══════════════════════════════════════
 SCORING
@@ -518,12 +554,12 @@ def _call_llm_for_chunk(
           f"total_speech={sum(c['duration'] for c in chunk):.1f}s")
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": json.dumps(chunk, ensure_ascii=False, indent=2)},
             ],
-            temperature=0.6,
+            temperature=0.2,
             response_format={"type": "json_object"},
         )
         data = json.loads(response.choices[0].message.content)
@@ -572,6 +608,62 @@ def _time_windows(
     return windows
 
 
+# Per content-type pillars: each pillar lists clip_types that satisfy it.
+# If none of a pillar's clip_types appear in the results, the pillar is missing.
+_PILLARS: Dict[str, List[Dict]] = {
+    "retail": [
+        {"name": "GREETING",      "types": {"STORY"},                        "desc": "Opening customer greeting / first interaction"},
+        {"name": "EXPERTISE",     "types": {"EXPERTISE"},                    "desc": "Staff explaining product, frames, or lenses"},
+        {"name": "TRY-ON/REACTION","types": {"TRANSFORMATION", "REACTION", "HUMOR"}, "desc": "Customer trying on glasses or emotional reaction"},
+        {"name": "CHECKOUT",      "types": {"SATISFYING"},                   "desc": "Payment, checkout, or goodbye moment"},
+    ],
+    "podcast": [
+        {"name": "HOOK",     "types": {"INSIGHT", "DEBATE", "QUOTE"},        "desc": "Bold opening claim or curiosity trigger"},
+        {"name": "INSIGHT",  "types": {"INSIGHT", "ADVICE"},                 "desc": "Core expert insight or key idea"},
+        {"name": "EMOTION",  "types": {"REACTION", "STORY"},                 "desc": "Laughter, vulnerability, or emotional peak"},
+        {"name": "TAKEAWAY", "types": {"ADVICE", "QUOTE"},                   "desc": "Memorable closing line or actionable advice"},
+    ],
+    "general": [
+        {"name": "HOOK",      "types": {"HOOK", "REVEAL"},                   "desc": "Strong attention-grabbing opener"},
+        {"name": "SUBSTANCE", "types": {"STORY", "INSIGHT", "HOW_TO"},       "desc": "Core content or main idea"},
+        {"name": "PEAK",      "types": {"REACTION", "REVEAL"},               "desc": "Emotional or narrative high point"},
+        {"name": "CLOSE",     "types": {"QUOTE", "SATISFYING"},              "desc": "Satisfying payoff or conclusion"},
+    ],
+}
+
+
+def _missing_pillars(results: List[Dict], content_type: str) -> List[Dict]:
+    """Return pillar dicts that have no matching clip_type in results."""
+    found_types = {r.get("clip_type", "").upper() for r in results}
+    pillars = _PILLARS.get(content_type, [])
+    return [p for p in pillars if not (p["types"] & found_types)]
+
+
+def _build_retry_prompt(content_type: str, existing: List[Dict], missing_pillars: List[Dict]) -> str:
+    """Build a focused second-pass prompt listing what's still missing."""
+    found_summary = ", ".join(
+        f"{r.get('clip_type','?')}(score={r.get('score','?')})" for r in existing
+    ) or "none"
+    missing_lines = "\n".join(
+        f"  • [{p['name']}] — {p['desc']} (clip types: {', '.join(sorted(p['types']))})"
+        for p in missing_pillars
+    )
+    base = _build_compose_prompt(content_type)
+    return (
+        base
+        + f"\n\n{'═'*39}\n"
+        + "SECOND-PASS INSTRUCTION\n"
+        + f"{'═'*39}\n"
+        + f"The first scan produced only {len(existing)} clip(s): {found_summary}.\n"
+        + "These pillars are STILL MISSING — you MUST find at least one clip for each:\n"
+        + missing_lines + "\n\n"
+        + "Rules for this pass:\n"
+        + "  • Lower your bar — include moments scoring 4.0+, not just 7+.\n"
+        + "  • Return ONLY clips for the missing pillar types above.\n"
+        + "  • Do NOT re-return clips that duplicate the ones already found.\n"
+    )
+
+
 def compose_story_clips(utterances_data: List[Dict[str, Any]], content_type: str = "retail") -> List[Dict]:
     """
     Given all utterances from a single video (chronological order), identify
@@ -601,10 +693,24 @@ def compose_story_clips(utterances_data: List[Dict[str, Any]], content_type: str
     print(f"[COMPOSE] type={content_type} | {len(utterances_data)} utterances | "
           f"video={total_secs/60:.1f} min | speech={total_speech:.1f}s")
 
-    # Short video — single LLM call
+    # Short video — single LLM call + optional pillar-audit retry
     if total_secs <= _CHUNK_TRIGGER_SECS:
         print(f"[COMPOSE] Single LLM call (video < {_CHUNK_TRIGGER_SECS/60:.0f} min)")
         result = _call_llm_for_chunk(client, prompt, utterances_data)
+
+        # Pillar audit: if we have enough speech but too few clips, retry for missing pillars
+        missing = _missing_pillars(result, content_type)
+        if missing and total_speech >= 60.0:
+            print(f"[COMPOSE] Pillar audit: missing {[p['name'] for p in missing]} — running retry pass")
+            retry_prompt = _build_retry_prompt(content_type, result, missing)
+            retry_results = _call_llm_for_chunk(client, retry_prompt, utterances_data)
+            added = 0
+            for story in retry_results:
+                if not _overlaps_existing(story["utterance_ids"], result):
+                    result.append(story)
+                    added += 1
+            print(f"[COMPOSE] Retry added {added} clip(s) — total now {len(result)}")
+
         print(f"[COMPOSE] Done — {len(result)} clips total\n{'='*60}\n")
         return result
 

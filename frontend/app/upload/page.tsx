@@ -41,7 +41,7 @@ function SectionLabel({ step, title, desc }: { step: number; title: string; desc
 
 export default function UploadPage() {
   const [mode] = useState<Mode>("single");
-  const [contentType, setContentType] = useState<ContentType>("retail");
+  const [contentType, setContentType] = useState<ContentType | null>(null);
   const [whisperVocab, setWhisperVocab] = useState<string>("kacamata moo\nwhatsapp");
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
@@ -74,7 +74,7 @@ export default function UploadPage() {
   }, [whisperVocab]);
 
   useEffect(() => {
-    localStorage.setItem(CONTENT_TYPE_KEY, contentType);
+    if (contentType) localStorage.setItem(CONTENT_TYPE_KEY, contentType);
   }, [contentType]);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function UploadPage() {
 
     const timer = window.setTimeout(() => {
       void saveProcessingSettings({
-        contentType,
+        contentType: contentType ?? undefined,
         whisperVocab,
       });
     }, 500);
@@ -125,7 +125,7 @@ export default function UploadPage() {
 
   function buildStyle(): StylePayload | null {
     if (!subtitleStyle) return null;
-    return { ...subtitleStyle, content_type: contentType, whisper_prompt: whisperVocab || undefined };
+    return { ...subtitleStyle, content_type: contentType ?? undefined, whisper_prompt: whisperVocab || undefined };
   }
 
   async function startSingle(file: File) {
@@ -345,19 +345,19 @@ export default function UploadPage() {
       {!jobId && (
         <button
           onClick={handleProcess}
-          disabled={!stagedFile || uploading}
+          disabled={!stagedFile || !contentType || uploading}
           className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-base transition-all"
           style={{
-            background: stagedFile && !uploading ? "#171412" : "#d7cebf",
-            color: stagedFile && !uploading ? "#f7f1e7" : "#83786c",
+            background: stagedFile && contentType && !uploading ? "#171412" : "#d7cebf",
+            color: stagedFile && contentType && !uploading ? "#f7f1e7" : "#83786c",
             boxShadow: "none",
-            cursor: stagedFile && !uploading ? "pointer" : "not-allowed",
+            cursor: stagedFile && contentType && !uploading ? "pointer" : "not-allowed",
             letterSpacing: "0.08em",
             textTransform: "uppercase",
           }}
         >
           <Play className="w-5 h-5" style={{ flexShrink: 0 }} />
-          {uploading ? "Uploading…" : stagedFile ? `Process Video` : "Select a video first"}
+          {uploading ? "Uploading…" : !contentType ? "Select a video type first" : !stagedFile ? "Select a video first" : "Process Video"}
         </button>
       )}
 

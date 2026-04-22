@@ -26,6 +26,11 @@ except ImportError:
 from . import config
 
 
+REFRAME_MAX_SPEED_RATIO = 0.72
+REFRAME_BASE_RESPONSE = 0.22
+REFRAME_CONFIDENCE_RESPONSE = 0.28
+
+
 @dataclass
 class ReframeSample:
     time: float
@@ -455,11 +460,11 @@ def _smooth_samples(
             x = max(0.0, min(max_crop_x, sample.crop_x))
         else:
             dt = max(0.001, sample.time - prev_t)
-            max_speed = crop_width * 0.38
+            max_speed = crop_width * REFRAME_MAX_SPEED_RATIO
             limited_delta = max(-max_speed * dt, min(max_speed * dt, sample.crop_x - prev_x))
             if abs(limited_delta) < 10.0:
                 limited_delta = 0.0
-            alpha = 0.14 + sample.confidence * 0.18
+            alpha = REFRAME_BASE_RESPONSE + sample.confidence * REFRAME_CONFIDENCE_RESPONSE
             x = prev_x + limited_delta * alpha
             x = max(0.0, min(max_crop_x, x))
 

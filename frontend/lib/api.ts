@@ -118,6 +118,14 @@ export async function getStatus(jobId: string): Promise<JobState> {
   return res.json();
 }
 
+export async function deleteJob(jobId: string): Promise<void> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/jobs/${jobId}`, { method: "DELETE", headers });
+  if (!res.ok) throw new Error(`Delete failed: ${res.statusText}`);
+}
+
 export async function reprocess(sourceJobId: string, style: StylePayload): Promise<string> {
   const fd = new FormData();
   fd.append("style", JSON.stringify(style));

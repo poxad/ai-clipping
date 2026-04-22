@@ -45,5 +45,9 @@ export function useHistory() {
     setHistory((prev) => [entry, ...prev.filter((e) => e.jobId !== jobId)].slice(0, MAX));
   }
 
-  return { history, addEntry };
+  function deleteEntry(jobId: string) {
+    setHistory((prev) => prev.filter((e) => e.jobId !== jobId));
+  }
+
+  return { history, addEntry, deleteEntry };
 }

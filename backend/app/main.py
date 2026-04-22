@@ -761,6 +761,50 @@ async def download_all(job_id: str):
         },
     )
 
+@app.delete("/api/jobs/{job_id}")
+async def delete_job(job_id: str):
+    """Delete a job and all its associated clips from DB and storage."""
+    import shutil
+    from .jobstore import _conn, _lock
+
+    # 1. Remove local output folder
+    jdir = _job_dir(job_id)
+    if Path(jdir).is_dir():
+        shutil.rmtree(jdir, ignore_errors=True)
+
+    # 2. Remove from SQLite
+    with _lock, _conn() as conn:
+        conn.execute("DELETE FROM jobs WHERE job_id = ?", (job_id,))
+        conn.commit()
+
+    # 3. Remove from Supabase (best-effort, non-blocking)
+    def _sb_delete():
+        try:
+            from .supabase_client import get_client
+            from . import config as _cfg
+            sb = get_client()
+            sb.table("job_clips").delete().eq("job_id", job_id).execute()
+            sb.table("jobs").delete().eq("job_id", job_id).execute()
+            # Delete all storage objects under this job_id in both buckets
+            for bucket in (_cfg.SUPABASE_CLIPS_BUCKET, _cfg.SUPABASE_UPLOADS_BUCKET):
+                try:
+                    items = sb.storage.from_(bucket).list(job_id)
+                    if items:
+                        paths = [f"{job_id}/{obj['name']}" for obj in items if obj.get("name")]
+                        if paths:
+                            sb.storage.from_(bucket).remove(paths)
+                except Exception:
+                    pass
+            print(f"[DELETE] Job {job_id} removed from Supabase")
+        except Exception as e:
+            print(f"[DELETE] Supabase cleanup failed (non-fatal): {e}")
+
+    import threading
+    threading.Thread(target=_sb_delete, daemon=False).start()
+
+    return {"deleted": job_id}
+
+
 from pydantic import BaseModel
 
 class WordOverride(BaseModel):

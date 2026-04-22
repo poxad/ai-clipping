@@ -1,11 +1,44 @@
 "use client";
 
+import { useState } from "react";
 import { useHistory } from "@/lib/useHistory";
-import { Film, Clock, ChevronRight, Plus } from "lucide-react";
+import { deleteJob } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Film, Clock, ChevronRight, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function HistoryPage() {
-  const { history } = useHistory();
+  const { history, deleteEntry } = useHistory();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  async function handleDelete(jobId: string) {
+    setDeletingId(jobId);
+    try {
+      await deleteJob(jobId);
+      deleteEntry(jobId);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  }
 
   return (
     <div className="page-shell page-shell-wide flex flex-col gap-6">
@@ -55,10 +88,9 @@ export default function HistoryPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {history.map((entry, i) => (
-            <Link
+            <div
               key={i}
-              href={`/history/${entry.jobId}`}
-              className="flex items-center gap-4 rounded-2xl border px-4 py-4 cursor-pointer group transition-all duration-150 sm:px-5"
+              className="flex items-center gap-4 rounded-2xl border px-4 py-4 group transition-all duration-150 sm:px-5"
               style={{ borderColor: "#d7cebf", background: "#fbf7f1", boxShadow: "none" }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
@@ -81,16 +113,13 @@ export default function HistoryPage() {
                 <Film className="w-5 h-5" style={{ color: "#b85430" }} />
               </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
+              {/* Info — clickable area */}
+              <Link href={`/history/${entry.jobId}`} className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold" style={{ color: "#171412" }}>
                     {entry.count} Clip{entry.count !== 1 ? "s" : ""} generated
                   </span>
-                  <span
-                    className="status-dot text-xs font-semibold"
-                    style={{ color: "#2c6a50" }}
-                  >
+                  <span className="status-dot text-xs font-semibold" style={{ color: "#2c6a50" }}>
                     Done
                   </span>
                 </div>
@@ -100,17 +129,69 @@ export default function HistoryPage() {
                     {entry.date} · Job {entry.jobId.slice(0, 8)}…
                   </span>
                 </div>
-              </div>
+              </Link>
 
-              {/* Arrow */}
-              <ChevronRight
-                className="w-5 h-5 flex-shrink-0 transition-transform group-hover:translate-x-0.5"
-                style={{ color: "#bfb39e" }}
-              />
-            </Link>
+              <Link href={`/history/${entry.jobId}`} tabIndex={-1} className="flex-shrink-0">
+                <ChevronRight
+                  className="w-5 h-5 transition-transform group-hover:translate-x-0.5"
+                  style={{ color: "#bfb39e" }}
+                />
+              </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[#f0e7d8] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#b85430]/20"
+                  aria-label={`Open actions for job ${entry.jobId.slice(0, 8)}`}
+                  disabled={deletingId === entry.jobId}
+                  style={{ color: "#83786c" }}
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-36 bg-white text-[#171412]">
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={deletingId === entry.jobId}
+                    onClick={() => setConfirmDeleteId(entry.jobId)}
+                    className="gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open && deletingId === null) setConfirmDeleteId(null);
+        }}
+      >
+        <AlertDialogContent className="bg-white text-[#171412]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this history job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the job from your history and delete the generated clips for this
+              job. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingId !== null}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={confirmDeleteId === null || deletingId !== null}
+              onClick={() => {
+                if (confirmDeleteId) void handleDelete(confirmDeleteId);
+              }}
+            >
+              {deletingId !== null ? "Deleting..." : "Delete job"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
